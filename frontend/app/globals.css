@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #d4ff00;
+  --color-accent: #d4ff00;
+  --color-urgent: #ff2d55;
+  --color-pending: #00d9ff;
+  --color-text-primary: #0a0e27;
+  --color-text-secondary: #8a8a8a;
+  --color-bg-page: #fafafa;
+  --color-bg-card: #ffffff;
+  --color-border: #f0f0f0;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f0f0;
+}
+
+/* CSS custom properties for inline styles */
+:root {
+  --color-primary: #d4ff00;
+  --color-accent: #d4ff00;
+  --color-urgent: #ff2d55;
+  --color-pending: #00d9ff;
+  --color-text-primary: #0a0e27;
+  --color-text-secondary: #8a8a8a;
+  --color-bg-page: #fafafa;
+  --color-bg-card: #ffffff;
+  --color-border: #f0f0f0;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f0f0;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #fafafa;
+  color: #0a0e27;
+  font-family: var(--font-inter, 'Inter', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+}
+
+/* ── Layout Utilities ── */
+.page-container {
+  width: 100%;
+  max-width: 540px;
+  margin-inline: auto;
+  padding: 24px 20px;
+  min-height: calc(100dvh - 80px);
+}
+
+/* ── Genz Button ── */
+.genz-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  background: #d4ff00;
+  color: #0a0e27;
+  border-radius: 10px;
+  font-weight: 900;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.genz-button:hover { opacity: 0.9; }
+.genz-button:active { transform: scale(0.97); }
+.genz-button:disabled { background: #f0f0f0; color: #8a8a8a; cursor: not-allowed; }
+
+/* ── Badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.badge-pending { background: #00d9ff; color: #0a0e27; }
+.badge-urgent  { background: #ff2d55; color: #ffffff; }
+.badge-success { background: #d4ff00; color: #0a0e27; }
+
+/* ── Section Title ── */
+.section-title {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #8a8a8a;
+  margin-bottom: 12px;
+}
+
+/* ── Card entry animation ── */
+.task-enter {
+  animation: fadeSlideUp 0.3s ease both;
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Skeleton shimmer ── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #fafafa 50%, #f0f0f0 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 8px;
+}
+
+/* ── Progress bar ── */
+.progress-bar { height: 4px; border-radius: 999px; background: #f0f0f0; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
