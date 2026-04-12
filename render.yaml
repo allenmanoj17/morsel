@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: morsel-api
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && bash start.sh
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: "*"
