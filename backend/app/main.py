@@ -10,6 +10,7 @@ from app.routers import templates as templates_router
 from app.routers import review as review_router
 from app.routers import weights as weights_router
 from app.routers import analytics as analytics_router
+from app.routers import water as water_router
 
 settings = get_settings()
 
@@ -37,6 +38,7 @@ app.include_router(templates_router.router)
 app.include_router(review_router.router)
 app.include_router(weights_router.router)
 app.include_router(analytics_router.router)
+app.include_router(water_router.router)
 
 
 @app.get("/health")

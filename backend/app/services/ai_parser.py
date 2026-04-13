@@ -15,26 +15,35 @@ def get_client() -> anthropic.AsyncAnthropic:
     return _client
 
 
-HAIKU_SYSTEM_PROMPT = """You are a Senior Precision Nutrition Specialist with 20+ years of clinical experience.
-Your job is to parse meal descriptions into exact nutritional macros with absolute accuracy.
+# ── AU Localised System Prompt ──
+HAIKU_SYSTEM_PROMPT = """You are a Senior Australian Nutrition Specialist with 20+ years of clinical experience in Sydney.
+Your job is to parse meal descriptions into exact nutritional macros with absolute precision.
+
+STRICT AUSTRALIAN CONTEXT:
+1. Portions: Use standard Australian metric measurements (e.g., 250ml metric cup).
+2. Food Types: Prioritise Australian food staples and terminology:
+   - "Flat White": ~220ml total, assumption: 180ml full cream milk + 1 shot espresso.
+   - "Meat Pie": Standard bakery size (~175g).
+   - "Sausage Roll": Standard bakery size (~120g).
+   - "Weet-Bix": 2 biscuits = 30g.
+   - "Standard Pub Meal": Assume larger portions unless specified.
+3. Spelling: Use Australian English (e.g., "Analysing", "Flavour").
 
 CRITICAL RULES:
-1. NEVER return 0 calories, protein, carbs, or fat for items that contain energy (e.g., milk, sugar, oil, nuts, meat, etc.). Only water can be 0.
-2. For "Large Cappuccino with 2 sugars", assume: 300ml full cream milk + 2 tsp white sugar.
-3. Be authoritative. If a quantity is missing, use a standard "restaurant serving" size.
-4. Return ONLY valid JSON — no preamble, no conversational text, no markdown.
+1. NEVER return 0 calories, protein, carbs, or fat for items that contain energy (milk, sugar, oil, nuts, meat, etc.). Only water can be 0.
+2. Return ONLY valid JSON — no preamble, no conversational text, no markdown.
 
 REQUIRED JSON FORMAT:
 {
   "meal_name": "short descriptive name",
   "items": [
     {
-      "name": "item with exact qty (e.g. 300ml whole milk)",
+      "name": "item with exact qty (e.g. 250ml full cream milk)",
       "calories": 0.0,
       "protein_g": 0.0,
       "carbs_g": 0.0,
       "fat_g": 0.0,
-      "assumptions": "why you chose these numbers",
+      "assumptions": "why you chose these numbers based on AU standards",
       "confidence": 0.0
     }
   ],
@@ -49,11 +58,11 @@ REQUIRED JSON FORMAT:
 async def parse_meal_with_haiku(meal_text: str) -> dict:
     """
     Call Claude Haiku to parse meal text into structured macros.
-    Using Claude 4.5 generation string.
+    Using Claude 4.5 generation string (AU Localised).
     """
     client = get_client()
 
-    print(f"DEBUG: Processing AI parse request (Claude 4.5) for: '{meal_text}'")
+    print(f"DEBUG: Processing AU AI parse request (Claude 4.5) for: '{meal_text}'")
     try:
         message = await client.messages.create(
             model="claude-haiku-4-5",
@@ -95,7 +104,7 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
             "parsed": {
                 "meal_name": f"AI Error: {str(e)[:50]}...",
                 "items": [],
-                "total_calories": 0.1, # Use 0.1 to avoid pure zero filters
+                "total_calories": 0.1, 
                 "total_protein_g": 0,
                 "total_carbs_g": 0,
                 "total_fat_g": 0,
@@ -117,8 +126,7 @@ async def review_day_with_sonnet(
     validation_flags: list,
 ) -> dict:
     """
-    Call Claude Sonnet for end-of-day review.
-    Upgraded to Claude 4.5 identifier.
+    Call Claude Sonnet for end-of-day review (AU English).
     """
     client = get_client()
 
@@ -133,7 +141,7 @@ async def review_day_with_sonnet(
     message = await client.messages.create(
         model="claude-sonnet-4-5",
         max_tokens=1024,
-        system="You are a Senior Nutrition Advisor. Return ONLY valid JSON.",
+        system="You are an expert Australian Nutrition Coach. Use Australian English and encouraging vibes. Return ONLY valid JSON.",
         messages=[
             {"role": "user", "content": f"Review this day's payload:\n{context}"}
         ],

@@ -32,7 +32,8 @@ def get_weekly_analytics(
     if not rollups:
         return AnalyticsWeeklyResponse(
             avg_calories=0, avg_protein_g=0, avg_carbs_g=0, avg_fat_g=0,
-            adherence_avg=0, best_day=None, logging_streak_days=0
+            adherence_avg=0, best_day=None, logging_streak_days=0,
+            protein_pct=0, carbs_pct=0, fat_pct=0
         )
         
     avg_cal = sum(float(r.get("calories_total") or 0) for r in rollups) / len(rollups)
@@ -40,14 +41,26 @@ def get_weekly_analytics(
     avg_carbs = sum(float(r.get("carbs_total_g") or 0) for r in rollups) / len(rollups)
     avg_fat = sum(float(r.get("fat_total_g") or 0) for r in rollups) / len(rollups)
     
+    # Calculate Macro % Distribution (based on calories)
+    p_cal = avg_prot * 4
+    c_cal = avg_carbs * 4
+    f_cal = avg_fat * 9
+    total_m_cal = p_cal + c_cal + f_cal
+    
+    p_pct = (p_cal / total_m_cal * 100) if total_m_cal > 0 else 0
+    c_pct = (c_cal / total_m_cal * 100) if total_m_cal > 0 else 0
+    f_pct = (f_cal / total_m_cal * 100) if total_m_cal > 0 else 0
+
     adherence_scores = [float(r["adherence_score"]) for r in rollups if r.get("adherence_score") is not None]
     avg_adherence = sum(adherence_scores) / len(adherence_scores) if adherence_scores else None
     
     # Best day based on adherence score
     best_day = None
     if adherence_scores:
-        best_rollup = max((r for r in rollups if r.get("adherence_score") is not None), key=lambda x: float(x["adherence_score"]))
-        best_day = best_rollup["date"]
+        filtered = [r for r in rollups if r.get("adherence_score") is not None]
+        if filtered:
+            best_rollup = max(filtered, key=lambda x: float(x["adherence_score"]))
+            best_day = best_rollup["date"]
         
     return AnalyticsWeeklyResponse(
         avg_calories=avg_cal,
@@ -56,7 +69,10 @@ def get_weekly_analytics(
         avg_fat_g=avg_fat,
         adherence_avg=avg_adherence,
         best_day=best_day,
-        logging_streak_days=len(rollups) # simplified for now
+        logging_streak_days=len(rollups),
+        protein_pct=p_pct,
+        carbs_pct=c_pct,
+        fat_pct=f_pct
     )
 
 @router.get("/trends", response_model=AnalyticsTrendsResponse)

@@ -104,4 +104,11 @@ export const api = {
 
   deleteWeight: (id: string, token: string) =>
     apiFetch(`/api/weights/${id}`, { method: 'DELETE' }, token),
+
+  // Water
+  getWaterLogs: (date: string, token: string) =>
+    apiFetch(`/api/water?date=${date}`, {}, token),
+
+  logWater: (body: { date: string; amount_ml: number }, token: string) =>
+    apiFetch('/api/water', { method: 'POST', body: JSON.stringify(body) }, token),
 }

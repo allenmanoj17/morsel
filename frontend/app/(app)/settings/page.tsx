@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
-import { Loader2, Save, Scale, ChevronRight, LogOut, User, Target as TargetIcon, Zap } from 'lucide-react'
+import { Loader2, Save, Scale, ChevronRight, LogOut, User, Target as TargetIcon } from 'lucide-react'
 
 interface Target {
   id: string; target_type: string; calories_target: number | null
@@ -41,7 +41,6 @@ export default function SettingsPage() {
   const [form, setForm] = useState({
     calories_target: '', protein_target_g: '', carbs_target_g: '', fat_target_g: ''
   })
-  const [unit, setUnit] = useState('kg')
 
   useEffect(() => {
     const supabase = createClient()
@@ -50,8 +49,7 @@ export default function SettingsPage() {
       setToken(session.access_token)
       
       const metaName = session.user.user_metadata?.display_name || session.user.user_metadata?.full_name
-      const emailPrefix = session.user.email?.split('@')[0]
-      setDisplayName(metaName || emailPrefix || '')
+      setDisplayName(metaName || session.user.email?.split('@')[0] || '')
 
       try {
         const [data, onb] = await Promise.all([
@@ -67,8 +65,6 @@ export default function SettingsPage() {
           carbs_target_g: def.carbs_target_g?.toString() || '',
           fat_target_g: def.fat_target_g?.toString() || '',
         })
-        const storedU = localStorage.getItem('morsel_unit')
-        if (storedU) setUnit(storedU)
       } catch (e) { console.error(e) }
       finally { setLoading(false) }
     })
@@ -98,16 +94,11 @@ export default function SettingsPage() {
     setSavingName(true)
     try { 
        const supabase = createClient()
-       // 1. Update Backend Database
        await api.updateOnboarding({ display_name: displayName }, token) 
-       // 2. Sync with Supabase Auth Metadata (prevents the jump/flicker)
-       await supabase.auth.updateUser({
-         data: { display_name: displayName }
-       })
+       await supabase.auth.updateUser({ data: { display_name: displayName } })
        setSuccess(true); setTimeout(() => setSuccess(false), 2500)
     }
-    catch (e) { console.error('NAME_UPDATE_ERROR:', e) } 
-    finally { setSavingName(false) }
+    catch {} finally { setSavingName(false) }
   }
 
   const handleSignOut = async () => {
@@ -117,7 +108,7 @@ export default function SettingsPage() {
   }
 
   const S = {
-    container: { maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
+    container: { maxWidth: '480px', margin: '0 auto', padding: '24px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
     card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px' } as React.CSSProperties
   }
@@ -127,100 +118,65 @@ export default function SettingsPage() {
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em' }}>Profile</h1>
-        <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Configure your tracking parameters ✨</p>
+        <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px' }}>Manage your account and goals ✨</p>
       </div>
 
-      {/* ── Identity ── */}
-      <p style={S.label}>Identity</p>
-      <div style={{ ...S.card, display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#8a8a8a', display: 'block', marginBottom: '8px', marginLeft: '4px' }}>Display Name</label>
-          <div style={{ position: 'relative' }}>
-            <User size={16} color="#8a8a8a" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              id="display-name" type="text" value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
-              onBlur={handleSaveName}
-              placeholder="e.g. Alex"
-              style={{ width: '100%', borderRadius: '16px', padding: '16px 20px 16px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '2px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white' }}
-            />
-          </div>
+      {/* ── Name ── */}
+      <p style={S.label}>Display Name</p>
+      <div style={{ ...S.card, display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <User size={16} color="#8a8a8a" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            id="display-name" type="text" value={displayName}
+            onChange={e => setDisplayName(e.target.value)}
+            onBlur={handleSaveName}
+            style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white' }}
+          />
         </div>
         <button onClick={handleSaveName} disabled={savingName}
-          style={{ height: '54px', padding: '0 20px', borderRadius: '16px', background: savingName ? 'rgba(255,255,255,0.05)' : '#d4ff00', color: '#0a0e27', border: 'none', fontWeight: 900, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease' }}>
+          style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#d4ff00', color: '#0a0e27', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {savingName ? <Loader2 size={16} className="animate-spin" /> : <Save size={18} />}
         </button>
       </div>
 
-      {/* ── Targets ── */}
-      <p style={S.label}>Daily Thresholds</p>
+      {/* ── Nutrition Goals ── */}
+      <p style={S.label}>Nutrition targets (Daily)</p>
       {loading ? (
-        <div style={{ ...S.card, height: 240, opacity: 0.3 }} />
+        <div style={{ ...S.card, height: 200, opacity: 0.3 }} />
       ) : (
         <div style={S.card}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-            <Field id="set-cal"   label="Calories"   value={form.calories_target}   onChange={v => setForm(f => ({ ...f, calories_target: v }))}   suffix="kcal" />
-            <Field id="set-prot"  label="Protein"  value={form.protein_target_g}  onChange={v => setForm(f => ({ ...f, protein_target_g: v }))}  suffix="g" />
-            <Field id="set-carbs" label="Carbs"       value={form.carbs_target_g}    onChange={v => setForm(f => ({ ...f, carbs_target_g: v }))}    suffix="g" />
-            <Field id="set-fat"   label="Fat"   value={form.fat_target_g}      onChange={v => setForm(f => ({ ...f, fat_target_g: v }))}      suffix="g" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+            <Field id="set-cal"   label="Calories" value={form.calories_target}  onChange={v => setForm(f => ({ ...f, calories_target: v }))}  suffix="kcal" />
+            <Field id="set-prot"  label="Protein"  value={form.protein_target_g} onChange={v => setForm(f => ({ ...f, protein_target_g: v }))} suffix="g" />
+            <Field id="set-carbs" label="Carbs"    value={form.carbs_target_g}   onChange={v => setForm(f => ({ ...f, carbs_target_g: v }))}   suffix="g" />
+            <Field id="set-fat"   label="Fat"      value={form.fat_target_g}     onChange={v => setForm(f => ({ ...f, fat_target_g: v }))}     suffix="g" />
           </div>
           <button id="save-settings-btn" onClick={handleSave} disabled={saving}
             style={{
-              width: '100%', padding: '18px', borderRadius: '16px', border: 'none', cursor: 'pointer',
-              background: success ? '#d4ff00' : 'rgba(255,255,255,0.1)', color: success ? '#0a0e27' : 'white',
-              fontWeight: 900, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.12em',
+              width: '100%', padding: '16px', borderRadius: '14px', border: 'none', cursor: 'pointer',
+              background: success ? '#d4ff00' : 'rgba(212,255,0,0.1)', color: success ? '#0a0e27' : '#d4ff00',
+              fontWeight: 900, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
               transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
             }}>
-            {saving ? <Loader2 size={16} className="animate-spin" /> : success ? '✓ Synchronized' : <><Save size={18} /> Update Strategy</>}
+            {saving ? <Loader2 size={16} className="animate-spin" /> : success ? 'Successfully Saved' : 'Save Goals'}
           </button>
         </div>
       )}
 
-      {/* ── Preferences ── */}
-      <p style={S.label}>System Preferences</p>
-      <div style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <p style={{ fontSize: '15px', fontWeight: 800 }}>Weight Units</p>
-          <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>Local measurement standard</p>
-        </div>
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '4px' }}>
-          {['kg', 'lbs'].map(u => {
-            const active = unit === u
-            return (
-              <button
-                key={u}
-                onClick={() => { localStorage.setItem('morsel_unit', u); setUnit(u); router.refresh() }}
-                style={{
-                  padding: '8px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                  fontSize: '12px', fontWeight: 900, textTransform: 'uppercase',
-                  background: active ? '#d4ff00' : 'transparent',
-                  color: active ? '#0a0e27' : '#8a8a8a',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {u}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── Biometrics ── */}
-      <p style={S.label}>Biometrics</p>
+      {/* ── Body ── */}
+      <p style={S.label}>Measurements</p>
       <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
         <button onClick={() => router.push('/weight')}
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Scale size={20} color="#d4ff00" />
-            </div>
+            <Scale size={20} color="#d4ff00" />
             <div style={{ textAlign: 'left' }}>
-              <p style={{ fontSize: '15px', fontWeight: 800 }}>Weight Tracking</p>
-              <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>Log morphological shifts</p>
+              <p style={{ fontSize: '15px', fontWeight: 800 }}>Body Weight</p>
+              <p style={{ fontSize: '11px', color: '#8a8a8a' }}>Track your daily progress</p>
             </div>
           </div>
-          <ChevronRight size={20} color="#8a8a8a" />
+          <ChevronRight size={20} color="#3a3a3a" />
         </button>
       </div>
 
@@ -228,14 +184,13 @@ export default function SettingsPage() {
       <div style={{ marginTop: '32px' }}>
         <button id="sign-out-btn" onClick={handleSignOut}
           style={{
-            width: '100%', padding: '18px', borderRadius: '16px',
-            background: 'rgba(255,45,85,0.08)', border: '1px solid rgba(255,45,85,0.1)',
-            color: '#ff2d55', fontWeight: 900, fontSize: '13px',
+            width: '100%', padding: '16px', borderRadius: '16px',
+            background: 'rgba(255,45,85,0.05)', border: '1px solid rgba(255,45,85,0.1)',
+            color: '#ff2d55', fontWeight: 900, fontSize: '12px',
             textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-            transition: 'all 0.2s ease'
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
           }}>
-          <LogOut size={18} /> Decommission Session
+          <LogOut size={16} /> Log Out
         </button>
       </div>
     </div>

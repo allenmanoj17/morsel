@@ -260,6 +260,9 @@ class AnalyticsWeeklyResponse(BaseModel):
     adherence_avg: Optional[float]
     best_day: Optional[date]
     logging_streak_days: int
+    protein_pct: Optional[float] = 0
+    carbs_pct: Optional[float] = 0
+    fat_pct: Optional[float] = 0
 
 
 class AnalyticsTrendsResponse(BaseModel):
@@ -290,6 +293,28 @@ class WeightResponse(BaseModel):
     unit: str
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Water ────────────────────────────────────────────────────────────────────
+
+class WaterLogCreate(BaseModel):
+    date: date
+    amount_ml: int
+
+
+class WaterLogUpdate(BaseModel):
+    amount_ml: int
+
+
+class WaterLogResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    date: date
+    amount_ml: int
+    created_at: datetime
 
     class Config:
         from_attributes = True
