@@ -33,11 +33,11 @@ app = FastAPI(
     description="Private nutrition tracking API — Supabase backend",
 )
 
-# CORS configuration for stable local development and PWA access
+# CORS configuration optimized for Vercel/Render serverless pairing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
