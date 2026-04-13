@@ -73,7 +73,7 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
     print(f"DEBUG: Processing AU AI parse request (Claude 4.5) for: '{meal_text}'")
     try:
         message = await client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             system=HAIKU_SYSTEM_PROMPT,
             messages=[
@@ -103,7 +103,7 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
             "raw_response": raw_text,
             "input_tokens": message.usage.input_tokens,
             "output_tokens": message.usage.output_tokens,
-            "model": "claude-3-5-haiku-20241022",
+            "model": "claude-haiku-4-5-20251001",
         }
     except Exception as e:
         print(f"CRITICAL ERROR in AI Parse: {str(e)}")

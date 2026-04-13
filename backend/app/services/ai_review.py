@@ -16,8 +16,8 @@ from app.config import get_settings
 from functools import lru_cache
 from app.config import get_settings
 
-# Using Claude 3.5 Haiku globally for rapid, high-intelligence analytics
-MODEL = "claude-3-5-haiku-20241022" 
+# Using the specific Claude Haiku version requested
+MODEL = "claude-haiku-4-5-20251001" 
 
 @lru_cache()
 def get_anthropic_client():
@@ -76,7 +76,7 @@ async def review_day_with_haiku(day_str: str, entries_data: list, totals: dict, 
         return json.loads(raw)
         
     except Exception as e:
-        logging.error(f"Sonnet 4.5 Review Error: {e}")
+        logging.error(f"AI Coach Review Error: {e}")
         # Return graceful fallback
         return {
             "day_complete": len(entries_data) > 0,
