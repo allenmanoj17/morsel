@@ -13,7 +13,7 @@ interface MealEntry {
 }
 
 const SRC_COLOR: Record<string, string> = { ai: '#ff2d55', db: '#00d9ff', template: '#d4ff00', manual: '#8a8a8a' }
-const SRC_LABEL: Record<string, string> = { ai: 'AI', db: 'DB', template: 'TPL', manual: 'MAN' }
+const SRC_LABEL: Record<string, string> = { ai: 'AI_INTEL', db: 'CORE_DB', template: 'PROTOCOL', manual: 'MANUAL' }
 
 function EditModal({ entry, token, onClose, onSaved }: {
   entry: MealEntry; token: string; onClose: () => void; onSaved: () => void
@@ -26,37 +26,37 @@ function EditModal({ entry, token, onClose, onSaved }: {
   const [saving, setSaving] = useState(false)
 
   const fields = [
-    { id: 'edit-name', label: 'Meal Label',  key: 'meal_name',  type: 'text',   suffix: '' },
-    { id: 'edit-time', label: 'Logged Time', key: 'time',       type: 'time',   suffix: '' },
-    { id: 'edit-cal',  label: 'Calories',    key: 'calories',   type: 'number', suffix: 'kcal' },
+    { id: 'edit-name', label: 'Fuel Label',  key: 'meal_name',  type: 'text',   suffix: '' },
+    { id: 'edit-time', label: 'Log Time',    key: 'time',       type: 'time',   suffix: '' },
+    { id: 'edit-cal',  label: 'Energy',      key: 'calories',   type: 'number', suffix: 'kcal' },
     { id: 'edit-prot', label: 'Protein',     key: 'protein_g',  type: 'number', suffix: 'g' },
     { id: 'edit-carbs',label: 'Carbs',       key: 'carbs_g',    type: 'number', suffix: 'g' },
     { id: 'edit-fat',  label: 'Fat',         key: 'fat_g',      type: 'number', suffix: 'g' },
-    { id: 'edit-notes',label: 'Notes',       key: 'notes',      type: 'text',   suffix: '' },
+    { id: 'edit-notes',label: 'Intel Notes', key: 'notes',      type: 'text',   suffix: '' },
   ]
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,14,39,0.5)', backdropFilter: 'blur(8px)' }} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: '540px', background: 'white', borderRadius: '20px 20px 0 0', padding: '28px 24px 40px', boxShadow: '0 -8px 40px rgba(0,0,0,0.12)' }}>
-        <div style={{ width: '36px', height: '3px', background: '#f0f0f0', borderRadius: '99px', margin: '0 auto 20px' }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0a0e27' }}>Edit Entry</h2>
-          <button onClick={onClose} style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #f0f0f0', background: '#fafafa', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <X size={16} color="#0a0e27" />
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,14,39,0.7)', backdropFilter: 'blur(12px)' }} />
+      <div style={{ position: 'relative', width: '100%', maxWidth: '540px', background: '#0a0e27', borderRadius: '32px 32px 0 0', padding: '32px 24px 48px', borderTop: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 -10px 40px rgba(0,0,0,0.4)' }}>
+        <div style={{ width: '40px', height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', margin: '0 auto 24px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'white', letterSpacing: '-0.04em' }}>Calibrate Entry</h2>
+          <button onClick={onClose} style={{ width: '44px', height: '44px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={20} color="#8a8a8a" />
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '32px' }}>
           {fields.map(({ id, label, key, type, suffix }) => (
             <div key={id} style={{ gridColumn: (key === 'meal_name' || key === 'notes') ? 'span 2' : 'span 1' }}>
-              <label style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#8a8a8a', display: 'block', marginBottom: '5px' }}>{label}</label>
+              <label style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#8a8a8a', display: 'block', marginBottom: '8px', marginLeft: '4px' }}>{label}</label>
               <div style={{ position: 'relative' }}>
                 <input id={id} type={type}
                   value={String((vals as any)[key])}
                   onChange={e => setVals(v => ({ ...v, [key]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))}
-                  style={{ width: '100%', borderRadius: '10px', padding: '12px 16px', paddingRight: suffix ? '44px' : '16px', fontSize: '14px', fontWeight: 700, outline: 'none', border: '2px solid #f0f0f0', background: 'white', color: '#0a0e27' }}
+                  style={{ width: '100%', borderRadius: '14px', padding: '14px 18px', paddingRight: suffix ? '52px' : '18px', fontSize: '14px', fontWeight: 700, outline: 'none', border: '2px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white' }}
                 />
-                {suffix && <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: 800, color: '#8a8a8a', textTransform: 'uppercase' as const }}>{suffix}</span>}
+                {suffix && <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' }}>{suffix}</span>}
               </div>
             </div>
           ))}
@@ -72,9 +72,9 @@ function EditModal({ entry, token, onClose, onSaved }: {
             } catch {} finally { setSaving(false) }
           }}
           disabled={saving}
-          style={{ width: '100%', padding: '16px', borderRadius: '12px', background: '#d4ff00', color: '#0a0e27', border: 'none', fontWeight: 900, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          style={{ width: '100%', padding: '20px', borderRadius: '16px', background: '#d4ff00', color: '#0a0e27', border: 'none', fontWeight: 900, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.12em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 12px 32px rgba(212,255,0,0.3)' }}
         >
-          {saving ? <Loader2 size={14} /> : <><Save size={16} /> Save Changes</>}
+          {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={20} /> Update Intel</>}
         </button>
       </div>
     </div>
@@ -119,7 +119,7 @@ export default function LogPage() {
   }, [load, date])
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this entry?')) return
+    if (!confirm('Decommission this entry?')) return
     await api.deleteMeal(id, token); load(token, date)
   }
 
@@ -142,74 +142,80 @@ export default function LogPage() {
     setDate(prev => offsetDate(prev, delta))
   }
 
+  const S = {
+    container: { maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
+    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
+    label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px', marginLeft: '4px' } as React.CSSProperties
+  }
+
   return (
-    <div style={{ maxWidth: '540px', margin: '0 auto', padding: '28px 20px 120px' }}>
+    <div style={S.container}>
 
       {/* ── Date Navigator ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0a0e27', letterSpacing: '-0.03em' }}>Meal Log</h1>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '2px' }}>tracking your intake ✨</p>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em' }}>Meal Log</h1>
+          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>tracking your trajectory ✨</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #f0f0f0', borderRadius: '12px', padding: '6px 8px' }}>
-          <button onClick={() => changeDate(-1)} style={{ width: '28px', height: '28px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ChevronLeft size={16} color="#0a0e27" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '8px 12px' }}>
+          <button onClick={() => changeDate(-1)} style={{ width: '32px', height: '32px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ChevronLeft size={18} color="#8a8a8a" />
           </button>
-          <span style={{ fontSize: '12px', fontWeight: 800, color: '#0a0e27', minWidth: '70px', textAlign: 'center' }}>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: 'white', minWidth: '85px', textAlign: 'center', letterSpacing: '-0.01em' }}>
             {friendlyDate(date)}
           </span>
-          <button onClick={() => changeDate(1)} disabled={isToday} style={{ width: '28px', height: '28px', border: 'none', background: 'transparent', cursor: isToday ? 'not-allowed' : 'pointer', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: isToday ? 0.3 : 1 }}>
-            <ChevronRight size={16} color="#0a0e27" />
+          <button onClick={() => changeDate(1)} disabled={isToday} style={{ width: '32px', height: '32px', border: 'none', background: 'transparent', cursor: isToday ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: isToday ? 0.2 : 1 }}>
+            <ChevronRight size={18} color="#8a8a8a" />
           </button>
         </div>
       </div>
 
       {/* ── Day Summary ── */}
       {entries.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '24px' }}>
           {[
-            { label: 'Calories', value: Math.round(totalCals), color: '#00d9ff', unit: '' },
+            { label: 'Energy', value: Math.round(totalCals), color: '#00d9ff', unit: '' },
             { label: 'Protein',  value: Math.round(totalProt), color: '#d4ff00', unit: 'g' },
-            { label: 'Carbs',    value: Math.round(entries.reduce((s,e) => s+e.carbs_g,0)), color: '#0a0e27', unit: 'g' },
-            { label: 'Fat',      value: Math.round(entries.reduce((s,e) => s+e.fat_g,0)),   color: '#0a0e27', unit: 'g' },
+            { label: 'Carbs',    value: Math.round(entries.reduce((s,e) => s+e.carbs_g,0)), color: 'white', unit: 'g' },
+            { label: 'Fat',      value: Math.round(entries.reduce((s,e) => s+e.fat_g,0)),   color: 'white', unit: 'g' },
           ].map(m => (
-            <div key={m.label} style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '12px', padding: '12px 8px', textAlign: 'center' }}>
-              <p style={{ fontSize: '18px', fontWeight: 800, color: m.color, letterSpacing: '-0.02em' }}>{m.value}{m.unit}</p>
-              <p style={{ fontSize: '9px', fontWeight: 700, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '3px' }}>{m.label}</p>
+            <div key={m.label} style={{ ...S.card, padding: '16px 8px', textAlign: 'center', marginBottom: 0 }}>
+              <p style={{ fontSize: '20px', fontWeight: 900, color: m.color, letterSpacing: '-0.03em' }}>{m.value}{m.unit}</p>
+              <p style={{ fontSize: '9px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '4px' }}>{m.label}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Meal Count badge ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', padding: '0 2px' }}>
-        <p style={{ fontSize: '11px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-          {entries.length} meal{entries.length !== 1 ? 's' : ''}
+      {/* ── List Control ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '0 4px' }}>
+        <p style={S.label}>
+          {entries.length} meals recognized
         </p>
         {!isToday && (
-          <button onClick={() => setDate(today)} style={{ fontSize: '11px', fontWeight: 800, color: '#00d9ff', background: 'none', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            → Back to Today
+          <button onClick={() => setDate(today)} style={{ fontSize: '11px', fontWeight: 900, color: '#d4ff00', background: 'none', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            → Jump to Current
           </button>
         )}
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {[1,2,3].map(i => <div key={i} style={{ background: 'white', border: '1px solid #f0f0f0', height: '96px', borderRadius: '14px', opacity: 0.5 }} />)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {[1,2,3].map(i => <div key={i} style={{ ...S.card, height: '110px', opacity: 0.3 }} />)}
         </div>
       ) : entries.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', border: '1px solid #f0f0f0', borderRadius: '16px' }}>
-          <p style={{ fontSize: '40px', marginBottom: '12px' }}>🍽</p>
-          <p style={{ fontSize: '16px', fontWeight: 700, color: '#0a0e27' }}>nothing logged</p>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px' }}>
-            {isToday ? 'tap + to start your day' : 'no meals logged this day'}
+        <div style={{ ...S.card, textAlign: 'center', padding: '80px 24px' }}>
+          <p style={{ fontSize: '48px', marginBottom: '16px' }}>🍽</p>
+          <p style={{ fontSize: '18px', fontWeight: 800 }}>System Idle</p>
+          <p style={{ fontSize: '14px', color: '#8a8a8a', marginTop: '6px', lineHeight: 1.5 }}>
+            {isToday ? 'Initialize tracking for the current cycle.' : 'No data recorded for this biological period.'}
           </p>
           {isToday && (
             <button
               onClick={async () => {
                 const yest = offsetDate(today, -1)
                 const yestMeals = await api.getMeals(yest, token)
-                if (yestMeals.length === 0) return alert('No meals found from yesterday')
+                if (yestMeals.length === 0) return alert('No cycle data found from previous period.')
                 for (const m of yestMeals) {
                   await api.createMeal({
                     meal_name: m.meal_name, entry_text_raw: m.entry_text_raw,
@@ -221,65 +227,65 @@ export default function LogPage() {
                 load(token, date)
               }}
               style={{
-                marginTop: '20px', background: 'none', border: '2px solid #f0f0f0',
-                borderRadius: '10px', padding: '10px 16px', fontSize: '12px',
-                fontWeight: 800, color: '#0a0e27', cursor: 'pointer',
-                textTransform: 'uppercase', letterSpacing: '0.08em'
+                marginTop: '32px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '14px', padding: '14px 24px', fontSize: '12px',
+                fontWeight: 900, color: 'white', cursor: 'pointer',
+                textTransform: 'uppercase', letterSpacing: '0.1em', transition: 'all 0.2s ease'
               }}
             >
-              Copy from Yesterday
+              Sync from Previous Cycle
             </button>
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {entries.map(entry => (
-            <div key={entry.id} className="task-enter" style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '14px', padding: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <div style={{ flex: 1, minWidth: 0, paddingRight: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', flexWrap: 'wrap' as const }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '5px', padding: '2px 7px' }}>
-                      <Clock size={9} color="#8a8a8a" />
-                      <span style={{ fontSize: '10px', fontWeight: 600, color: '#8a8a8a' }}>{formatTime(entry.logged_at)}</span>
+            <div key={entry.id} style={{ ...S.card, padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ flex: 1, minWidth: 0, paddingRight: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', padding: '4px 8px' }}>
+                      <Clock size={10} color="#8a8a8a" />
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#8a8a8a' }}>{formatTime(entry.logged_at)}</span>
                     </span>
                     <span style={{
                       background: SRC_COLOR[entry.source_type] || '#8a8a8a',
-                      color: entry.source_type === 'manual' ? '#fff' : '#0a0e27',
-                      borderRadius: '4px', padding: '2px 6px',
-                      fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em'
+                      color: '#0a0e27',
+                      borderRadius: '5px', padding: '3px 8px',
+                      fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em'
                     }}>{SRC_LABEL[entry.source_type] || entry.source_type}</span>
                   </div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0a0e27', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {entry.meal_name}
                   </h3>
                 </div>
-                <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                   {isToday && (
-                    <button title="Duplicate" onClick={() => handleDuplicate(entry)}
-                      style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #f0f0f0', background: '#fafafa', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Copy size={12} color="#8a8a8a" />
+                    <button title="Replicate" onClick={() => handleDuplicate(entry)}
+                      style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Copy size={14} color="#8a8a8a" />
                     </button>
                   )}
                   <button id={`edit-${entry.id}`} onClick={() => setEditEntry(entry)}
-                    style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #f0f0f0', background: '#fafafa', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Pencil size={12} color="#0a0e27" />
+                    style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Pencil size={14} color="#8a8a8a" />
                   </button>
                   <button id={`del-${entry.id}`} onClick={() => handleDelete(entry.id)}
-                    style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(255,45,85,0.2)', background: 'rgba(255,45,85,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Trash2 size={12} color="#ff2d55" />
+                    style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid rgba(255,45,85,0.1)', background: 'rgba(255,45,85,0.02)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Trash2 size={14} color="#ff2d55" />
                   </button>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '5px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
                 {[
-                  { label: 'CAL', value: entry.calories, color: '#00d9ff' },
-                  { label: 'PRO', value: entry.protein_g, color: '#d4ff00' },
-                  { label: 'CHO', value: entry.carbs_g,  color: '#0a0e27' },
-                  { label: 'FAT', value: entry.fat_g,    color: '#0a0e27' },
+                  { label: 'Energy', value: entry.calories,  color: '#00d9ff' },
+                  { label: 'Prot',   value: entry.protein_g,  color: '#d4ff00' },
+                  { label: 'Carb',   value: entry.carbs_g,    color: 'white' },
+                  { label: 'Fat',    value: entry.fat_g,      color: 'white' },
                 ].map(m => (
-                  <div key={m.label} style={{ background: '#fafafa', borderRadius: '8px', padding: '7px 4px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 800, color: m.color, letterSpacing: '-0.02em' }}>{Math.round(m.value)}</p>
-                    <p style={{ fontSize: '8px', fontWeight: 700, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{m.label}</p>
+                  <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '10px 4px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <p style={{ fontSize: '16px', fontWeight: 900, color: m.color, letterSpacing: '-0.04em' }}>{Math.round(m.value)}</p>
+                    <p style={{ fontSize: '8px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '2px' }}>{m.label}</p>
                   </div>
                 ))}
               </div>
@@ -288,18 +294,18 @@ export default function LogPage() {
         </div>
       )}
 
-      {/* FAB — only show on today */}
+      {/* Floating Action Button */}
       {isToday && (
         <button id="log-add-fab" onClick={() => setShowAdd(true)}
           style={{
             position: 'fixed', bottom: '88px', left: '50%', transform: 'translateX(-50%)',
-            width: '56px', height: '56px', borderRadius: '16px',
+            width: '64px', height: '64px', borderRadius: '20px',
             background: '#d4ff00', color: '#0a0e27', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 32px rgba(212,255,0,0.5)', zIndex: 50,
+            boxShadow: '0 12px 40px rgba(212,255,0,0.4)', zIndex: 50, transition: 'all 0.2s ease',
           }}
         >
-          <Plus size={22} strokeWidth={3} />
+          <Plus size={32} strokeWidth={3} />
         </button>
       )}
 

@@ -27,7 +27,6 @@ export default function WeightPage() {
   }, [])
 
   useEffect(() => {
-    // Load from localStorage client-side only
     const stored = localStorage.getItem('morsel_goal_weight')
     if (stored) setGoalWeight(stored)
     const storedH = localStorage.getItem('morsel_height')
@@ -58,91 +57,91 @@ export default function WeightPage() {
   }
 
   const chartData = [...weights].reverse().map(w => ({ date: w.date.substring(5), weight: w.weight_value }))
-
-  // Analytics derived
   const latest = weights[0]?.weight_value
   const previous = weights[1]?.weight_value
   const delta = (latest && previous) ? (latest - previous) : null
   const lowest  = weights.length ? Math.min(...weights.map(w => w.weight_value)) : null
   const highest = weights.length ? Math.max(...weights.map(w => w.weight_value)) : null
-
-  // BMI: need height — we'll let user input it or skip
   const bmi = (latest && height) ? (latest / ((parseFloat(height)/100) ** 2)) : null
   const bmiLabel = bmi === null ? null : bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Healthy' : bmi < 30 ? 'Overweight' : 'Obese'
   const bmiColor = bmi === null ? '#8a8a8a' : bmi < 18.5 ? '#00d9ff' : bmi < 25 ? '#d4ff00' : bmi < 30 ? '#ff2d55' : '#ff2d55'
-
   const goal = parseFloat(goalWeight) || null
 
-  const TOOLTIP_STYLE = { backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #f0f0f0', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', fontSize: '12px', fontWeight: 700 }
+  const TOOLTIP_STYLE = { backgroundColor: '#0a0e27', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 800, color: 'white' }
+
+  const S = {
+    container: { maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
+    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
+    label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '10px' } as React.CSSProperties
+  }
 
   return (
-    <div style={{ maxWidth: '540px', margin: '0 auto', padding: '28px 20px 120px' }}>
-
+    <div style={S.container}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
         <button onClick={() => router.push('/settings')}
-          style={{ width: '40px', height: '40px', borderRadius: '10px', border: '1px solid #f0f0f0', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <ArrowLeft size={18} color="#0a0e27" />
+          style={{ width: '44px', height: '44px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <ArrowLeft size={18} color="#8a8a8a" />
         </button>
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0a0e27', letterSpacing: '-0.03em' }}>Biometrics</h1>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '2px' }}>body composition tracking ✨</p>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em' }}>Biometrics</h1>
+          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>body composition analysis ✨</p>
         </div>
       </div>
 
       {loading ? (
-        <div style={{ background: 'white', border: '1px solid #f0f0f0', height: 300, borderRadius: '16px', opacity: 0.5 }} />
+        <div style={{ ...S.card, height: 300, opacity: 0.3 }} />
       ) : (
         <>
           {/* ── Stats Row ── */}
           {weights.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
-                <p style={{ fontSize: '11px', fontWeight: 800, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '6px' }}>Current</p>
-                <p style={{ fontSize: '26px', fontWeight: 800, color: '#0a0e27', letterSpacing: '-0.03em' }}>{latest}</p>
-                <p style={{ fontSize: '10px', color: '#8a8a8a' }}>{unit}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
+              <div style={S.card}>
+                <p style={S.label}>Current</p>
+                <p style={{ fontSize: '28px', fontWeight: 900, color: 'white', letterSpacing: '-0.04em' }}>{latest}</p>
+                <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 700, marginTop: '2px' }}>{unit}</p>
               </div>
-              <div style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
-                <p style={{ fontSize: '11px', fontWeight: 800, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '6px' }}>Change</p>
+              <div style={S.card}>
+                <p style={S.label}>Shift</p>
                 {delta !== null ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    {delta > 0 ? <TrendingUp size={16} color="#ff2d55" /> : delta < 0 ? <TrendingDown size={16} color="#d4ff00" /> : <Minus size={16} color="#8a8a8a" />}
-                    <p style={{ fontSize: '22px', fontWeight: 800, color: delta > 0 ? '#ff2d55' : delta < 0 ? '#0a0e27' : '#8a8a8a', letterSpacing: '-0.03em' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {delta > 0 ? <TrendingUp size={18} color="#ff2d55" /> : delta < 0 ? <TrendingDown size={18} color="#d4ff00" /> : <Minus size={18} color="#8a8a8a" />}
+                    <p style={{ fontSize: '24px', fontWeight: 900, color: delta > 0 ? '#ff2d55' : delta < 0 ? 'white' : '#8a8a8a', letterSpacing: '-0.04em' }}>
                       {delta > 0 ? '+' : ''}{delta.toFixed(1)}
                     </p>
                   </div>
-                ) : <p style={{ fontSize: '20px', color: '#8a8a8a' }}>—</p>}
-                <p style={{ fontSize: '10px', color: '#8a8a8a' }}>since last</p>
+                ) : <p style={{ fontSize: '22px', fontWeight: 800, color: '#8a8a8a' }}>—</p>}
+                <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 700, marginTop: '2px' }}>prev: {previous || '—'}</p>
               </div>
               {bmi !== null ? (
-                <div style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '6px' }}>BMI</p>
-                  <p style={{ fontSize: '26px', fontWeight: 800, color: bmiColor, letterSpacing: '-0.03em' }}>{bmi.toFixed(1)}</p>
-                  <p style={{ fontSize: '10px', color: bmiColor, fontWeight: 700 }}>{bmiLabel}</p>
+                <div style={S.card}>
+                  <p style={S.label}>BMI</p>
+                  <p style={{ fontSize: '28px', fontWeight: 900, color: bmiColor, letterSpacing: '-0.04em' }}>{bmi.toFixed(1)}</p>
+                  <p style={{ fontSize: '10px', color: bmiColor, fontWeight: 800 }}>{bmiLabel}</p>
                 </div>
               ) : (
-                <div style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '14px', padding: '12px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <p style={{ fontSize: '9px', fontWeight: 800, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '6px' }}>BMI</p>
-                  <input placeholder="height cm" type="number"
+                <div style={{ ...S.card, padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <p style={S.label}>BMI</p>
+                  <input placeholder="H (cm)" type="number"
                     value={height}
                     onChange={e => { setHeight(e.target.value); localStorage.setItem('morsel_height', e.target.value) }}
-                    style={{ width: '100%', textAlign: 'center', border: '2px solid #f0f0f0', borderRadius: '8px', padding: '6px', fontSize: '11px', fontWeight: 700, outline: 'none', color: '#0a0e27' }}
+                    style={{ width: '100%', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '8px', fontSize: '12px', fontWeight: 800, outline: 'none', color: 'white', background: 'rgba(255,255,255,0.03)' }}
                   />
                 </div>
               )}
             </div>
           )}
 
-          {/* Chart */}
+          {/* Chart Card */}
           {chartData.length > 0 && (
-            <div style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '16px', padding: '20px', height: 260, marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <p style={{ fontSize: '11px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Weight Trend</p>
+            <div style={{ ...S.card, height: 280 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <p style={S.label}>Weight Pipeline</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label style={{ fontSize: '10px', color: '#8a8a8a' }}>Goal:</label>
+                  <label style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 800 }}>GOAL</label>
                   <input type="number" placeholder={unit} value={goalWeight}
                     onChange={e => { setGoalWeight(e.target.value); localStorage.setItem('morsel_goal_weight', e.target.value) }}
-                    style={{ width: '56px', border: '1px solid #f0f0f0', borderRadius: '6px', padding: '3px 6px', fontSize: '11px', fontWeight: 700, outline: 'none', color: '#0a0e27' }}
+                    style={{ width: '60px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '4px 8px', fontSize: '12px', fontWeight: 800, outline: 'none', color: 'white', background: 'rgba(255,255,255,0.03)' }}
                   />
                 </div>
               </div>
@@ -150,93 +149,90 @@ export default function WeightPage() {
                 <AreaChart data={chartData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
                   <defs>
                     <linearGradient id="wGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#d4ff00" stopOpacity={0.2} />
+                      <stop offset="5%"  stopColor="#d4ff00" stopOpacity={0.15} />
                       <stop offset="95%" stopColor="#d4ff00" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="0" stroke="#f0f0f0" vertical={false} />
-                  <XAxis dataKey="date" tick={{ fill: '#8a8a8a', fontSize: 9, fontWeight: 700 }} tickLine={false} axisLine={false} dy={8} />
-                  <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fill: '#8a8a8a', fontSize: 9 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: '#f0f0f0', strokeWidth: 2 }} />
-                  {goal && <ReferenceLine y={goal} stroke="#ff2d55" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `goal ${goal}${unit}`, position: 'right', fill: '#ff2d55', fontSize: 9 }} />}
-                  <Area type="monotone" dataKey="weight" name={`Weight (${unit})`} stroke="#d4ff00" strokeWidth={2.5} fill="url(#wGrad)" strokeLinecap="round" dot={{ r: 3, fill: '#d4ff00', strokeWidth: 0 }} />
+                  <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fill: '#8a8a8a', fontSize: 10, fontWeight: 800 }} tickLine={false} axisLine={false} dy={10} />
+                  <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fill: '#8a8a8a', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} />
+                  {goal && <ReferenceLine y={goal} stroke="#ff2d55" strokeDasharray="6 6" strokeWidth={1.5} label={{ value: `TARGET`, position: 'right', fill: '#ff2d55', fontSize: 10, fontWeight: 900 }} />}
+                  <Area type="monotone" dataKey="weight" name={`Mass`} stroke="#d4ff00" strokeWidth={3} fill="url(#wGrad)" strokeLinecap="round" pulse={true} dot={{ r: 4, fill: '#d4ff00', strokeWidth: 0 }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* ── Range row ── */}
+          {/* ── Range Cards ── */}
           {weights.length >= 2 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
               {[
-                { label: 'Highest', value: highest, color: '#ff2d55' },
-                { label: 'Lowest',  value: lowest,  color: '#d4ff00' },
+                { label: 'System High', value: highest, color: '#ff2d55' },
+                { label: 'System Low',  value: lowest,  color: '#d4ff00' },
               ].map(r => (
-                <div key={r.label} style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '8px', height: '36px', borderRadius: '4px', background: r.color }} />
+                <div key={r.label} style={{ ...S.card, display: 'flex', alignItems: 'center', gap: '14px', marginBottom: 0 }}>
+                  <div style={{ width: '4px', height: '40px', borderRadius: '4px', background: r.color }} />
                   <div>
-                    <p style={{ fontSize: '10px', fontWeight: 800, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>{r.label}</p>
-                    <p style={{ fontSize: '22px', fontWeight: 800, color: '#0a0e27', letterSpacing: '-0.03em' }}>{r.value}{unit}</p>
+                    <p style={S.label}>{r.label}</p>
+                    <p style={{ fontSize: '24px', fontWeight: 900, letterSpacing: '-0.04em' }}>{r.value}{unit}</p>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* ── Add form ── */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.15em' }}>
-              {weights.length} entries
-            </p>
+          {/* ── Action Header ── */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '0 4px' }}>
+            <p style={S.label}>{weights.length} entries detected</p>
             <button onClick={() => setShowForm(!showForm)}
-              style={{ background: '#d4ff00', color: '#0a0e27', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase' as const, letterSpacing: '0.08em', cursor: 'pointer' }}>
-              {showForm ? 'Cancel' : '+ Log Weight'}
+              style={{ background: '#d4ff00', color: '#0a0e27', border: 'none', borderRadius: '12px', padding: '10px 20px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+              {showForm ? 'Cancel Operation' : '+ Initialize Log'}
             </button>
           </div>
 
           {showForm && (
-            <div style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '14px', padding: '20px', marginBottom: '12px', display: 'flex', flexWrap: 'wrap' as const, gap: '12px', alignItems: 'flex-end' }}>
-              <div style={{ flex: '1 1 120px' }}>
-                <label style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#8a8a8a', display: 'block', marginBottom: '6px' }}>Date</label>
+            <div style={{ ...S.card, display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', border: '1px solid #d4ff00', background: 'rgba(212,255,0,0.02)' }}>
+              <div style={{ flex: '1 1 140px' }}>
+                <label style={S.label}>Deployment Date</label>
                 <input type="date" value={wDate} onChange={e => setWDate(e.target.value)}
-                  style={{ width: '100%', border: '2px solid #f0f0f0', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', fontWeight: 700, outline: 'none', color: '#0a0e27', background: 'white' }} />
+                  style={{ width: '100%', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px', fontSize: '14px', fontWeight: 700, outline: 'none', color: 'white', background: 'rgba(255,255,255,0.03)' }} />
               </div>
-              <div style={{ flex: '1 1 100px' }}>
-                <label style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#8a8a8a', display: 'block', marginBottom: '6px' }}>Weight ({unit})</label>
-                <input type="number" step="0.1" value={wVal} onChange={e => setWVal(e.target.value)} placeholder="75.0"
-                  style={{ width: '100%', border: '2px solid #f0f0f0', borderRadius: '10px', padding: '12px 14px', fontSize: '18px', fontWeight: 800, outline: 'none', color: '#0a0e27', background: 'white' }} />
+              <div style={{ flex: '1 1 120px' }}>
+                <label style={S.label}>Mass Value</label>
+                <input type="number" step="0.1" value={wVal} onChange={e => setWVal(e.target.value)} placeholder="00.0" autoFocus
+                  style={{ width: '100%', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px', fontSize: '20px', fontWeight: 900, outline: 'none', color: 'white', background: 'rgba(255,255,255,0.03)' }} />
               </div>
               <button onClick={handleSave} disabled={saving}
-                style={{ height: '47px', padding: '0 20px', borderRadius: '10px', background: '#d4ff00', color: '#0a0e27', border: 'none', fontWeight: 900, fontSize: '13px', textTransform: 'uppercase' as const, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {saving ? <Loader2 size={14} /> : <><Plus size={14} /> Log</>}
+                style={{ height: '54px', padding: '0 24px', borderRadius: '14px', background: '#d4ff00', color: '#0a0e27', border: 'none', fontWeight: 900, fontSize: '13px', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {saving ? <Loader2 size={18} className="animate-spin" /> : <Plus size={20} strokeWidth={3} />}
               </button>
             </div>
           )}
 
-          {/* ── List ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* ── Bio History ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {weights.map((w, i) => {
               const prev = weights[i + 1]?.weight_value
               const d = prev !== undefined ? w.weight_value - prev : null
               return (
-                <div key={w.id} style={{ background: 'white', border: '1px solid #f0f0f0', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                        <span style={{ fontSize: '20px', fontWeight: 800, color: '#0a0e27', letterSpacing: '-0.02em' }}>{w.weight_value}</span>
-                        <span style={{ fontSize: '11px', color: '#8a8a8a' }}>{unit}</span>
+                <div key={w.id} style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', marginBottom: 0 }}>
+                  <div style={{ flex: 1 }}>
+                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                        <span style={{ fontSize: '24px', fontWeight: 900, color: 'white', letterSpacing: '-0.04em' }}>{w.weight_value}</span>
+                        <span style={{ fontSize: '12px', color: '#8a8a8a', fontWeight: 700 }}>{unit.toUpperCase()}</span>
                         {d !== null && (
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: d > 0 ? '#ff2d55' : d < 0 ? '#d4ff00' : '#8a8a8a', marginLeft: '4px' }}>
-                            {d > 0 ? `▲${d.toFixed(1)}` : d < 0 ? `▼${Math.abs(d).toFixed(1)}` : '—'}
-                          </span>
+                          <div style={{ fontSize: '11px', fontWeight: 900, color: d > 0 ? '#ff2d55' : d < 0 ? '#d4ff00' : '#8a8a8a', marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            {d > 0 ? <TrendingUp size={10}/> : d < 0 ? <TrendingDown size={10}/> : null}
+                            {Math.abs(d).toFixed(1)}
+                          </div>
                         )}
-                      </div>
-                      <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>{w.date}</p>
-                    </div>
+                     </div>
+                     <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '4px' }}>{new Date(w.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                   </div>
                   <button onClick={() => handleDelete(w.id)}
-                    style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(255,45,85,0.15)', background: 'rgba(255,45,85,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Trash2 size={13} color="#ff2d55" />
+                    style={{ width: '40px', height: '40px', borderRadius: '12px', border: '1px solid rgba(255,45,85,0.1)', background: 'rgba(255,45,85,0.02)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Trash2 size={16} color="#ff2d55" />
                   </button>
                 </div>
               )

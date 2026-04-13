@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
-import { ChevronRight, ChevronLeft, Loader2, Sparkles, User, Target, Zap, Activity, Info } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Loader2, Sparkles, User, Target, Zap, Activity, Info, Dumbbell } from 'lucide-react'
 
 // Steps: 0: Welcome, 1: Identity, 2: Mission, 3: Metrics, 4: Strategy, 5: Ignite
 const STEPS = ['welcome', 'identity', 'mission', 'metrics', 'strategy', 'ignite'] as const

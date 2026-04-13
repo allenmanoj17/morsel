@@ -9,283 +9,161 @@ import {
 } from 'recharts'
 import { Flame, Dumbbell, CalendarDays, Activity, TrendingUp, Award, Zap } from 'lucide-react'
 
-const S = {
-  page: { maxWidth: '540px', margin: '0 auto', padding: '28px 20px 120px' } as React.CSSProperties,
-  card: { background: 'white', border: '1px solid #f0f0f0', borderRadius: '16px', padding: '20px' } as React.CSSProperties,
-  label: { fontSize: '11px', fontWeight: 900 as const, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.14em' },
-  big: { fontSize: '32px', fontWeight: 800 as const, color: '#0a0e27', letterSpacing: '-0.04em', lineHeight: 1 } as React.CSSProperties,
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' } as React.CSSProperties,
-  sectionTitle: { fontSize: '11px', fontWeight: 900 as const, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.15em', marginBottom: '10px' } as React.CSSProperties,
-}
-
-const TOOLTIP_STYLE = {
-  backgroundColor: '#ffffff', borderRadius: '10px',
-  border: '1px solid #f0f0f0', boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-  fontSize: '12px', fontWeight: 700
-}
-
 export default function AnalyticsPage() {
   const [weekly, setWeekly] = useState<any>(null)
-  const [trends, setTrends] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [token, setToken] = useState('')
 
-  const loadData = useCallback(async (tok: string) => {
-    try {
-      setLoading(true)
-      setError(null)
-      const [wRes, tRes] = await Promise.all([
-        api.getWeeklyAnalytics(tok),
-        api.getAnalyticsTrends(30, tok),
-      ])
-      setWeekly(wRes)
-      if (tRes?.dates) {
-        setTrends(tRes.dates.map((date: string, i: number) => ({
-          date: date.substring(5),
-          calories: Math.round(tRes.calories?.[i] ?? 0),
-          protein: Math.round(tRes.protein?.[i] ?? 0),
-          adherence: Math.round(tRes.adherence?.[i] ?? 0),
-        })))
-      }
-    } catch (e) { 
-      console.error(e) 
-      setError('Communication with server failed')
-    }
+  const load = useCallback(async (tok: string) => {
+    try { const data = await api.getWeeklyAnalytics(tok); setWeekly(data) }
+    catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setToken(session.access_token)
-        loadData(session.access_token)
-      }
+      if (session) load(session.access_token)
     })
-  }, [loadData])
+  }, [load])
 
-  // Derived stats
-  const bestCalDay = trends.reduce((best, d) => d.calories > (best?.calories ?? 0) ? d : best, null as any)
-  const bestProtDay = trends.reduce((best, d) => d.protein > (best?.protein ?? 0) ? d : best, null as any)
-  const avgCal30 = trends.length ? Math.round(trends.reduce((s, d) => s + d.calories, 0) / trends.length) : 0
-  const avgProt30 = trends.length ? Math.round(trends.reduce((s, d) => s + d.protein, 0) / trends.length) : 0
-
-  // Macro split pie
-  const macroSplit = weekly ? [
-    { name: 'Protein', value: Math.round(weekly.avg_protein_g * 4), color: '#d4ff00' },
-    { name: 'Carbs',   value: Math.round((weekly.avg_calories - weekly.avg_protein_g * 4 - weekly.avg_fat_g * 9) || 0), color: '#00d9ff' },
-    { name: 'Fat',     value: Math.round(weekly.avg_fat_g * 9), color: '#ff2d55' },
-  ].filter(m => m.value > 0) : []
-
-  // Weekday averages from trends
-  const byDay: Record<string, number[]> = {}
-  trends.forEach(d => {
-    const [m, day] = d.date.split('-')
-    const wd = new Date(`2024-${m}-${day}`).toLocaleDateString('en-US', { weekday: 'short' })
-    if (!byDay[wd]) byDay[wd] = []
-    byDay[wd].push(d.calories)
-  })
-  const weekdayData = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(wd => ({
-    day: wd,
-    avg: byDay[wd] ? Math.round(byDay[wd].reduce((a,b) => a+b,0) / byDay[wd].length) : 0,
-  }))
-
-  if (loading) {
-    return (
-      <div style={S.page}>
-        {[1,2,3].map(i => (
-          <div key={i} style={{ ...S.card, height: i === 1 ? 200 : 140, marginBottom: '12px', opacity: 0.5 }} />
-        ))}
-      </div>
-    )
+  const S = {
+    container: { maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
+    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
+    label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px', marginLeft: '4px' } as React.CSSProperties
   }
 
-  if (error) {
-    return (
-      <div style={S.page}>
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'rgba(255,45,85,0.05)', border: '1px solid rgba(255,45,85,0.1)', borderRadius: '16px' }}>
-          <p style={{ fontSize: '40px', marginBottom: '12px' }}>📡</p>
-          <p style={{ fontSize: '16px', fontWeight: 700, color: '#ff2d55' }}>Signal Lost</p>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px', marginBottom: '20px' }}>{error}</p>
-          <button 
-            onClick={() => loadData(token)}
-            style={{ 
-              background: '#0a0e27', color: 'white', border: 'none', padding: '10px 20px', 
-              borderRadius: '10px', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', cursor: 'pointer' 
-            }}
-          >
-            Reconnect
-          </button>
-        </div>
-      </div>
-    )
-  }
+  const TOOLTIP_STYLE = { backgroundColor: '#0a0e27', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 800, color: 'white' }
+
+  if (loading) return (
+    <div style={S.container}>
+      <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', marginBottom: '32px' }}>Analytics</h1>
+      {[1, 2, 3].map(i => <div key={i} style={{ ...S.card, height: 200, opacity: 0.3 }} />)}
+    </div>
+  )
+
+  if (!weekly) return null
+
+  // Process data for charts
+  const macroData = [
+    { name: 'Protein', value: weekly.avg_protein_g * 4, color: '#d4ff00' },
+    { name: 'Carbs', value: weekly.avg_carbs_g * 4, color: '#00d9ff' },
+    { name: 'Fat', value: weekly.avg_fat_g * 9, color: '#ffffff' }
+  ]
+
+  const dayData = Object.entries(weekly.daily_total_calories || {}).map(([date, val]) => ({
+    date: date.substring(5),
+    calories: val
+  })).reverse()
 
   return (
-    <div style={S.page}>
-      {/* Header */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0a0e27', letterSpacing: '-0.03em' }}>Performance</h1>
-        <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px' }}>last 30 days ✨</p>
+    <div style={S.container}>
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em' }}>Market Intel</h1>
+        <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>weekly bio-performance audit ✨</p>
       </div>
 
-      {/* ── Weekly Stats Grid ── */}
-      {weekly && (
-        <>
-          <p style={S.sectionTitle}>Weekly Averages</p>
-          <div style={{ ...S.grid2, marginBottom: '12px' }}>
-            {[
-              { icon: Flame,       label: 'Avg Energy',    val: `${Math.round(weekly.avg_calories || 0)}`, unit: 'kcal', color: '#00d9ff', background: 'rgba(0,217,255,0.08)' },
-              { icon: Dumbbell,    label: 'Avg Protein',   val: `${Math.round(weekly.avg_protein_g || 0)}`, unit: 'g', color: '#d4ff00', background: 'rgba(212,255,0,0.12)' },
-              { icon: Activity,    label: 'Adherence',     val: `${weekly.adherence_avg ? Math.round(weekly.adherence_avg) : '--'}`, unit: '%', color: '#ff2d55', background: 'rgba(255,45,85,0.08)' },
-              { icon: CalendarDays,label: 'Streak',        val: `${weekly.logging_streak_days}`, unit: 'days', color: '#0a0e27', background: '#fafafa' },
-            ].map(({ icon: Icon, label, val, unit, color, background }) => (
-              <div key={label} style={{ ...S.card, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 12px', textAlign: 'center' }}>
-                <div style={{ width: '40px', height: '40px', background: background, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
-                  <Icon size={18} color={color} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
-                  <span style={S.big}>{val}</span>
-                  <span style={{ fontSize: '12px', color: '#8a8a8a' }}>{unit}</span>
-                </div>
-                <p style={{ ...S.label, marginTop: '4px' }}>{label}</p>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* ── Personal Bests ── */}
-      {trends.length > 0 && (
-        <>
-          <p style={S.sectionTitle}>Personal Records</p>
-          <div style={{ ...S.grid2, marginBottom: '12px' }}>
-            <div style={{ ...S.card, padding: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <Award size={14} color="#d4ff00" fill="#d4ff00" />
-                <span style={S.label}>Best Protein Day</span>
-              </div>
-              <span style={{ ...S.big, fontSize: '26px', color: '#d4ff00' }}>{bestProtDay?.protein ?? '--'}g</span>
-              <p style={{ fontSize: '10px', color: '#8a8a8a', marginTop: '4px' }}>{bestProtDay?.date}</p>
+      {/* ── Core High-Level Stats ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+        {[
+          { icon: Flame,       label: 'Avg Energy',    val: `${Math.round(weekly.avg_calories || 0)}`,  unit: 'KCAL', color: '#00d9ff', background: 'rgba(0,217,255,0.08)' },
+          { icon: Dumbbell,    label: 'Avg Protein',   val: `${Math.round(weekly.avg_protein_g || 0)}`, unit: 'G',    color: '#d4ff00', background: 'rgba(212,255,0,0.08)' },
+          { icon: CalendarDays, label: 'Cycle Days',    val: `${weekly.total_days || 0}`,              unit: 'DAYS', color: 'white',   background: 'rgba(255,255,255,0.05)' },
+          { icon: Activity,    label: 'Entry Velocity',val: `${weekly.total_meal_entries || 0}`,       unit: 'LOGS', color: 'white',   background: 'rgba(255,255,255,0.05)' },
+        ].map(st => (
+          <div key={st.label} style={S.card}>
+            <div style={{ width: '40px', height: '40px', background: st.background, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+              <st.icon size={20} color={st.color} />
             </div>
-            <div style={{ ...S.card, padding: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <Zap size={14} color="#00d9ff" fill="#00d9ff" />
-                <span style={S.label}>Best Energy Day</span>
-              </div>
-              <span style={{ ...S.big, fontSize: '26px', color: '#00d9ff' }}>{bestCalDay?.calories ?? '--'}</span>
-              <p style={{ fontSize: '10px', color: '#8a8a8a', marginTop: '4px' }}>{bestCalDay?.date} kcal</p>
-            </div>
-            <div style={{ ...S.card, padding: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <TrendingUp size={14} color="#8a8a8a" />
-                <span style={S.label}>30-Day Avg Cal</span>
-              </div>
-              <span style={{ ...S.big, fontSize: '26px' }}>{avgCal30}</span>
-              <p style={{ fontSize: '10px', color: '#8a8a8a', marginTop: '4px' }}>kcal / day</p>
-            </div>
-            <div style={{ ...S.card, padding: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <Dumbbell size={14} color="#8a8a8a" />
-                <span style={S.label}>30-Day Avg Protein</span>
-              </div>
-              <span style={{ ...S.big, fontSize: '26px' }}>{avgProt30}</span>
-              <p style={{ fontSize: '10px', color: '#8a8a8a', marginTop: '4px' }}>g / day</p>
+            <p style={S.label}>{st.label}</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.04em' }}>{st.val}</span>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: '#8a8a8a' }}>{st.unit}</span>
             </div>
           </div>
-        </>
-      )}
+        ))}
+      </div>
 
-      {/* ── Consistency Heatmap (28 Days) ── */}
-      {trends.length > 0 && (() => {
-        const last28 = [...trends].slice(-28)
-        return (
-          <>
-            <p style={S.sectionTitle}>Consistency Heartbeat (28d)</p>
-            <div style={{ ...S.card, marginBottom: '24px', padding: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
-                {last28.map((d, i) => {
-                  const score = d.adherence ?? 0
-                  const color = score >= 90 ? '#d4ff00' : score >= 70 ? '#00d9ff' : score >= 40 ? '#ff2d55' : '#f0f0f0'
-                  return (
-                    <div key={i} title={`${d.date}: ${score}%`} style={{ 
-                      aspectRatio: '1', borderRadius: '4px', background: color, 
-                      transition: 'all 0.3s ease', opacity: score === 0 && d.calories === 0 ? 0.2 : 1 
-                    }} />
-                  )
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                <span style={{ fontSize: '9px', fontWeight: 800, color: '#8a8a8a' }}>28 DAYS AGO</span>
-                <span style={{ fontSize: '9px', fontWeight: 800, color: '#8a8a8a' }}>TODAY</span>
-              </div>
-            </div>
-          </>
-        )
-      })()}
+      {/* ── Daily Trajectory (Bar Chart) ── */}
+      <p style={S.label}>Energy Deployment Trajectory</p>
+      <div style={{ ...S.card, height: 260 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={dayData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#8a8a8a', fontSize: 10, fontWeight: 800 }} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#8a8a8a', fontSize: 10 }} />
+            <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+            <Bar dataKey="calories" fill="#00d9ff" radius={[6, 6, 0, 0]} barSize={24} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
-      {/* ── Macro Strategy Mix ── */}
-      {macroSplit.length > 0 && (
-        <>
-          <p style={S.sectionTitle}>Macro Strategy Split</p>
-          <div style={{ ...S.card, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' as const }}>
-            <div style={{ width: '140px', height: '140px', position: 'relative', flexShrink: 0 }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <PieChart>
-                  <Pie data={macroSplit} cx="50%" cy="50%" innerRadius={50} outerRadius={72}
-                    paddingAngle={4} dataKey="value" strokeWidth={0}>
-                    {macroSplit.map((m, i) => <Cell key={i} fill={m.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [`${v} kcal`, '']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                <Activity size={20} color="#0a0e27" />
-              </div>
-            </div>
-            <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {macroSplit.map(m => {
-                const total = macroSplit.reduce((s, x) => s + x.value, 0)
-                const pct = total > 0 ? Math.round((m.value / total) * 100) : 0
-                return (
-                  <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: m.color }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 900, color: '#0a0e27', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.name}</span>
-                        <span style={{ fontSize: '11px', fontWeight: 900, color: '#0a0e27' }}>{pct}%</span>
-                      </div>
-                      <div style={{ height: '3px', background: '#f0f0f0', borderRadius: '99px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: m.color, borderRadius: '99px' }} />
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── 30-Day Trends (Consolidated) ── */}
-      {trends.length > 0 && (
-        <>
-          <p style={S.sectionTitle}>Adherence & Energy (30D)</p>
-          <div style={{ ...S.card, height: 260, marginBottom: '12px', minWidth: 0 }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-              <BarChart data={trends} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="0" stroke="#f0f0f0" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: '#8a8a8a', fontSize: 9, fontWeight: 700 }} tickLine={false} axisLine={false} minTickGap={20} dy={8} />
-                <YAxis tick={{ fill: '#8a8a8a', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: '#fafafa' }} />
-                <Bar dataKey="calories" name="Energy" fill="#00d9ff" radius={[4,4,0,0]} maxBarSize={12} />
-                <Bar dataKey="adherence" name="Score" fill="#ff2d55" radius={[4,4,0,0]} maxBarSize={12} />
-              </BarChart>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+        
+        {/* ── Nutrient Matrix (Pie Chart) ── */}
+        <div style={{ ...S.card, height: 320 }}>
+          <p style={S.label}>Macronutrient Matrix</p>
+          <div style={{ height: '220px', position: 'relative' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie 
+                  data={macroData} innerRadius={60} outerRadius={85} paddingAngle={8} 
+                  dataKey="value" stroke="none" strokeWidth={0}
+                >
+                  {macroData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+              </PieChart>
             </ResponsiveContainer>
+            {/* Center Stat */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center' }}>
+              <p style={{ fontSize: '10px', fontWeight: 900, color: '#8a8a8a', letterSpacing: '0.1em' }}>AVG</p>
+              <p style={{ fontSize: '24px', fontWeight: 900, color: 'white', letterSpacing: '-0.02em' }}>{Math.round(weekly.avg_calories)}</p>
+            </div>
           </div>
-        </>
-      )}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '10px' }}>
+             {macroData.map(m => (
+               <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: m.color }} />
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#8a8a8a' }}>{m.name.toUpperCase()}</span>
+               </div>
+             ))}
+          </div>
+        </div>
+
+        {/* ── System Consistency ── */}
+        <div style={S.card}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ width: '48px', height: '48px', background: 'rgba(212,255,0,0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Award size={24} color="#d4ff00" />
+            </div>
+            <div>
+              <p style={{ fontSize: '18px', fontWeight: 800, color: 'white' }}>System Reliability</p>
+              <p style={{ fontSize: '12px', color: '#8a8a8a', fontWeight: 600 }}>Operational consistency audit</p>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+             {[
+               { icon: Zap, label: 'Tracking Frequency', score: 'HIGH', desc: 'Consistent data intake detected' },
+               { icon: TrendingUp, label: 'Growth Vector', score: 'STABLE', desc: 'Maintained fueling protocol' }
+             ].map(r => (
+               <div key={r.label} style={{ display: 'flex', gap: '16px' }}>
+                  <r.icon size={18} color="#8a8a8a" />
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                       <span style={{ fontSize: '14px', fontWeight: 800 }}>{r.label}</span>
+                       <span style={{ fontSize: '9px', fontWeight: 900, background: '#d4ff00', color: '#0a0e27', padding: '2px 6px', borderRadius: '4px' }}>{r.score}</span>
+                    </div>
+                    <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>{r.desc}</p>
+                  </div>
+               </div>
+             ))}
+          </div>
+        </div>
+
+      </div>
     </div>
   )
 }
