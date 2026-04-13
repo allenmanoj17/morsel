@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Optional
 import anthropic
 from app.config import get_settings
@@ -63,11 +64,17 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
         raw_text = message.content[0].text.strip()
         print(f"DEBUG: AI Response received (length {len(raw_text)})")
 
+        # Extract JSON using regex (handles chatty models/markdown)
+        json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+        if not json_match:
+            print(f"ERROR: No JSON found in AI response. Raw text: {raw_text[:500]}")
+            raise ValueError("No JSON found in AI response")
+
         # Validate JSON
         try:
-            parsed = json.loads(raw_text)
+            parsed = json.loads(json_match.group())
         except json.JSONDecodeError as e:
-            print(f"ERROR: AI returned invalid JSON. Raw text: {raw_text[:500]}")
+            print(f"ERROR: AI returned invalid JSON after extraction. Raw text: {raw_text[:500]}")
             raise ValueError(f"Haiku returned invalid JSON: {str(e)}")
 
         return {
