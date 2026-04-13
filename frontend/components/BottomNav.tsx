@@ -6,10 +6,10 @@ import { LayoutDashboard, ScrollText, BookOpen, BarChart2, Settings } from 'luci
 
 const NAV_ITEMS = [
   { href: '/', icon: LayoutDashboard, label: 'Today' },
-  { href: '/log', icon: ScrollText, label: 'Log' },
-  { href: '/templates', icon: BookOpen, label: 'Templates' },
-  { href: '/analytics', icon: BarChart2, label: 'Analytics' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/log', icon: ScrollText, label: 'Feed' },
+  { href: '/templates', icon: BookOpen, label: 'Protocols' },
+  { href: '/analytics', icon: BarChart2, label: 'Intel' },
+  { href: '/settings', icon: Settings, label: 'Bio' },
 ]
 
 export default function BottomNav() {
@@ -19,17 +19,15 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
-        background: 'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(12px)',
-        borderTop: '1px solid #f0f0f0',
-        paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
-        display: 'flex',
+        background: 'rgba(10, 14, 39, 0.85)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+        boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
       }}
     >
       <div
-        className="flex w-full justify-around items-center px-2 pt-2"
-        style={{ display: 'flex', width: '100%', justifyContent: 'space-around', alignItems: 'center', padding: '8px 8px 0' }}
+        style={{ display: 'flex', width: '100%', justifyContent: 'space-around', alignItems: 'center', padding: '12px 10px 0' }}
       >
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const active = pathname === href
@@ -38,27 +36,38 @@ export default function BottomNav() {
               key={href}
               href={href}
               id={`nav-${label.toLowerCase()}`}
-              className="flex flex-col items-center gap-1 py-1 px-2 transition-all"
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '4px 8px', minWidth: '52px', position: 'relative' }}
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                gap: '6px', 
+                padding: '6px 4px', 
+                minWidth: '56px', 
+                position: 'relative',
+                transition: 'all 0.2s ease'
+              }}
             >
               {active && (
                 <div style={{
-                  position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-                  width: '24px', height: '2px', borderRadius: '0 0 4px 4px',
+                  position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+                  width: '32px', height: '3px', borderRadius: '0 0 6px 6px',
                   background: '#d4ff00',
+                  boxShadow: '0 0 15px rgba(212, 255, 0, 0.6)'
                 }} />
               )}
               <Icon
-                size={20}
-                strokeWidth={active ? 2.5 : 1.8}
-                style={{ color: active ? '#0a0e27' : '#8a8a8a' }}
+                size={22}
+                strokeWidth={active ? 3 : 2}
+                color={active ? '#d4ff00' : '#8a8a8a'}
+                style={{ transition: 'all 0.2s ease', opacity: active ? 1 : 0.7 }}
               />
               <span style={{
-                fontSize: '9px',
-                fontWeight: active ? 800 : 500,
-                color: active ? '#0a0e27' : '#8a8a8a',
+                fontSize: '10px',
+                fontWeight: 900,
+                color: active ? 'white' : '#8a8a8a',
                 textTransform: 'uppercase',
-                letterSpacing: '0.06em',
+                letterSpacing: '0.1em',
+                transition: 'all 0.2s ease'
               }}>
                 {label}
               </span>

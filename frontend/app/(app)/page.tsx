@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
@@ -106,8 +106,7 @@ function StreakBars({ days }: { days: { date: string; score: number | null }[] }
   )
 }
 
-// ── Main Page ──
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
@@ -148,7 +147,7 @@ export default function DashboardPage() {
       setError('Connection dropped. Is the backend running?')
     }
     finally { setLoading(false) }
-  }, [today])
+  }, [])
 
   useEffect(() => {
     const code = searchParams.get('code')
@@ -201,7 +200,6 @@ export default function DashboardPage() {
     setSelectedDate(next)
   }
 
-  // Obsidian Theme Styles
   const S = {
     container: { maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
     card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
@@ -215,11 +213,11 @@ export default function DashboardPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
              <button onClick={() => changeDate(-1)} style={{ padding: '4px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
-               <ChevronLeft size={16} color="#8a8a8a" />
+                <ChevronLeft size={16} color="#8a8a8a" />
              </button>
              <p style={S.label}>{friendlyDate(selectedDate)}</p>
              <button onClick={() => changeDate(1)} disabled={isToday} style={{ padding: '4px', background: 'transparent', border: 'none', cursor: isToday ? 'not-allowed' : 'pointer', opacity: isToday ? 0.2 : 1 }}>
-               <ChevronRight size={16} color="#8a8a8a" />
+                <ChevronRight size={16} color="#8a8a8a" />
              </button>
           </div>
           <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.1 }}>
@@ -378,5 +376,18 @@ export default function DashboardPage() {
         />
       )}
     </div>
+  )
+}
+
+// ── Wrapper with Suspense ──
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' }}>
+        <Loader2 size={32} className="animate-spin" style={{ margin: '100px auto', display: 'block' }} />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }

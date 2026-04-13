@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, ScrollText, BookOpen, BarChart2, Settings } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/', icon: LayoutDashboard, label: 'Today' },
-  { href: '/log', icon: ScrollText, label: 'Log' },
-  { href: '/templates', icon: BookOpen, label: 'Templates' },
-  { href: '/analytics', icon: BarChart2, label: 'Analytics' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/log', icon: ScrollText, label: 'Feed' },
+  { href: '/templates', icon: BookOpen, label: 'Protocols' },
+  { href: '/analytics', icon: BarChart2, label: 'Intelligence' },
+  { href: '/settings', icon: Settings, label: 'Profile' },
 ]
 
 export default function SideNav() {
@@ -17,49 +17,48 @@ export default function SideNav() {
 
   return (
     <nav
-      className="fixed top-0 left-0 bottom-0 w-64 hidden md:flex flex-col border-r border-[#f0f0f0] bg-white z-40"
-      style={{ borderRight: '1px solid #f0f0f0', background: 'white' }}
+      className="fixed top-0 left-0 bottom-0 w-64 hidden md:flex flex-col z-40"
+      style={{ borderRight: '1px solid rgba(255,255,255,0.05)', background: '#0a0e27' }}
     >
       {/* Brand */}
-      <div className="px-8 pt-10 pb-8 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-lg bg-[#d4ff00] text-[#0a0e27]"
-          style={{ background: '#d4ff00', color: '#0a0e27', borderRadius: '10px' }}>
+      <div className="px-8 pt-10 pb-8 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl bg-[#d4ff00] text-[#0a0e27] shadow-[0_0_20px_rgba(212,255,0,0.2)]">
           M
         </div>
         <div>
-          <div className="font-black text-xl tracking-tighter text-[#0a0e27]" style={{ color: '#0a0e27', fontWeight: 900 }}>Morsel</div>
-          <div className="text-[10px] uppercase tracking-widest font-black text-[#8a8a8a]" style={{ color: '#8a8a8a', fontSize: '10px' }}>Fuel Tracker</div>
+          <div className="font-black text-2xl tracking-tighter text-white" style={{ lineHeight: 1 }}>Morsel</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] font-black text-[#8a8a8a] mt-1">Private_Core</div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-1 px-4 flex-1">
+      <div className="flex flex-col gap-2 px-4 flex-1 mt-4">
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const active = pathname === href
           return (
             <Link
               key={href}
               href={href}
-              className="group relative flex items-center gap-4 px-4 py-3.5 rounded-[10px] transition-all duration-150"
+              className="group relative flex items-center gap-4 px-5 py-4 rounded-[16px] transition-all duration-200"
               style={{
-                background: active ? '#fafafa' : 'transparent',
-                color: active ? '#0a0e27' : '#8a8a8a',
-                borderRadius: '10px',
+                background: active ? 'rgba(255,255,255,0.03)' : 'transparent',
+                border: active ? '1px solid rgba(255,255,255,0.05)' : '1px solid transparent',
               }}
             >
               {active && (
                 <div
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full"
-                  style={{ background: '#d4ff00', position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '3px', height: '28px', borderRadius: '0 4px 4px 0' }}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-full"
+                  style={{ background: '#d4ff00', boxShadow: '0 0 12px rgba(212,255,0,0.4)' }}
                 />
               )}
               <Icon
-                size={18}
-                strokeWidth={active ? 2.5 : 2}
-                style={{ color: active ? '#0a0e27' : '#8a8a8a' }}
+                size={20}
+                strokeWidth={active ? 3 : 2}
+                color={active ? '#d4ff00' : '#8a8a8a'}
+                style={{ transition: 'all 0.2s ease' }}
               />
               <span
-                className="text-[14px] font-bold tracking-tight"
-                style={{ fontWeight: active ? 700 : 500, color: active ? '#0a0e27' : '#8a8a8a' }}
+                className="text-[14px] font-black tracking-tight"
+                style={{ color: active ? 'white' : '#8a8a8a', textTransform: 'uppercase', letterSpacing: '0.05em' }}
               >
                 {label}
               </span>
@@ -68,18 +67,18 @@ export default function SideNav() {
         })}
       </div>
 
-      {/* Footer */}
-      <div className="px-8 py-6 border-t border-[#f0f0f0]" style={{ borderTop: '1px solid #f0f0f0' }}>
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-full bg-[#d4ff00] flex items-center justify-center font-black text-xs text-[#0a0e27]"
-            style={{ background: '#d4ff00', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 900, color: '#0a0e27' }}
-          >
-            U
+      {/* Footer System Status */}
+      <div className="px-8 py-8 border-t border-white/[0.05]">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+             <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center font-black text-sm text-[#d4ff00]">
+               OP
+             </div>
+             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#d4ff00] border-2 border-[#0a0e27]" />
           </div>
           <div>
-            <div className="text-sm font-bold text-[#0a0e27]" style={{ color: '#0a0e27', fontSize: '13px', fontWeight: 700 }}>Profile</div>
-            <div className="text-[10px] font-bold text-[#8a8a8a] uppercase tracking-widest" style={{ color: '#8a8a8a', fontSize: '10px' }}>Active</div>
+            <div className="text-[13px] font-black text-white tracking-tight">Operator</div>
+            <div className="text-[10px] font-black text-[#d4ff00]/60 uppercase tracking-widest mt-0.5">Linked_Live</div>
           </div>
         </div>
       </div>
