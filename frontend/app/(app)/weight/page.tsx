@@ -158,7 +158,7 @@ export default function WeightPage() {
                   <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fill: '#8a8a8a', fontSize: 10 }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} />
                   {goal && <ReferenceLine y={goal} stroke="#ff2d55" strokeDasharray="6 6" strokeWidth={1.5} label={{ value: `TARGET`, position: 'right', fill: '#ff2d55', fontSize: 10, fontWeight: 900 }} />}
-                  <Area type="monotone" dataKey="weight" name={`Mass`} stroke="#d4ff00" strokeWidth={3} fill="url(#wGrad)" strokeLinecap="round" pulse={true} dot={{ r: 4, fill: '#d4ff00', strokeWidth: 0 }} />
+                  <Area type="monotone" dataKey="weight" name={`Mass`} stroke="#d4ff00" strokeWidth={3} fill="url(#wGrad)" strokeLinecap="round" dot={{ r: 4, fill: '#d4ff00', strokeWidth: 0 }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
