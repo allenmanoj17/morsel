@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # App
     app_env: str = "production"
     cors_origins: str = Field(
-        default="http://localhost:3000,http://127.0.0.1:3000",
+        default="http://localhost:3000,http://127.0.0.1:3000,https://morsel-log.vercel.app",
         alias="CORS_ORIGINS",
     )
     secret_key: str = "morsel-secret-change-me"
