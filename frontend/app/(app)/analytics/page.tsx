@@ -189,7 +189,7 @@ export default function AnalyticsPage() {
           <div style={S.chartTitle}><Scale size={18} color="#d4ff00" /> Weight Trend (kg)</div>
           <div style={{ height: 180 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData.filter(d => d.weight !== null)}>
+              <LineChart data={chartData.filter((d: any) => d.weight !== null)}>
                 <CartesianGrid vertical={false} stroke={CHART_THEME.grid.stroke} />
                 <XAxis dataKey="date" hide />
                 <YAxis hide domain={['auto', 'auto']} />
