@@ -222,7 +222,7 @@ export default function DashboardPage() {
                <ChevronRight size={16} color="#8a8a8a" />
              </button>
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 800, tracking: '-0.04em', lineHeight: 1.1 }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.1 }}>
             {greeting}{displayName ? `, ${displayName.split(' ')[0]}` : ''} ✨
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>

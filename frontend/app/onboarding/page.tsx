@@ -100,7 +100,7 @@ export default function OnboardingPage() {
   const S = {
     container: { background: '#0a0e27', minHeight: '100dvh', color: 'white', padding: '40px 24px', display: 'flex', flexDirection: 'column' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' as const, letterSpacing: '0.2em', color: '#8a8a8a', marginBottom: '8px', display: 'block' } as React.CSSProperties,
-    h1: { fontSize: '42px', fontWeight: 800, tracking: '-0.04em', lineHeight: 1.1, marginBottom: '24px' } as any,
+    h1: { fontSize: '42px', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: '24px' } as any,
     input: { width: '100%', background: 'rgba(255,255,255,0.03)', border: '2px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '18px 24px', fontSize: '18px', fontWeight: 700, color: 'white', outline: 'none', transition: 'all 0.3s' } as React.CSSProperties,
     card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '20px' } as React.CSSProperties,
     btnNext: { background: '#d4ff00', color: '#0a0e27', borderRadius: '18px', padding: '20px', fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%' } as React.CSSProperties,
