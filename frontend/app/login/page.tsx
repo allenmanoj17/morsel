@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Leaf, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
 
@@ -57,27 +57,27 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-6 bg-[#fafafa]">
+    <div className="min-h-dvh flex flex-col items-center justify-center p-6 bg-[#0a0e27] text-white">
       <div className="w-full max-w-sm flex flex-col items-center animate-in fade-in duration-700">
 
       {/* Logo */}
       <div className="flex items-center gap-3 mb-10">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#d4ff00] text-[#0a0e27] font-black text-xl shadow-sm">M</div>
         <div className="flex flex-col">
-          <span className="font-bold text-2xl tracking-tighter text-[#0a0e27]">Morsel</span>
+          <span className="font-bold text-2xl tracking-tighter text-white">Morsel</span>
           <span className="text-[10px] uppercase tracking-widest font-black text-[#8a8a8a] -mt-1">Private Tracker</span>
         </div>
       </div>
 
       {/* Card */}
-      <div className="w-full bg-white rounded-[10px] border-2 border-[#f0f0f0] p-8 shadow-sm scale-in">
-        <h1 className="text-2xl font-bold mb-1 text-[#0a0e27]">Welcome back</h1>
+      <div className="w-full bg-white/[0.02] border border-white/[0.05] rounded-[24px] p-8 shadow-sm">
+        <h1 className="text-2xl font-bold mb-1 text-white">Welcome back</h1>
         <p className="text-[14px] font-medium text-[#8a8a8a] mb-8">
           Sign in to your tracker ✨
         </p>
 
         <form onSubmit={mode === 'signin' ? handleSignIn : handleMagicLink} className="flex flex-col gap-4">
-          <div className="flex gap-2 mb-6 p-1 rounded-md bg-[#fafafa] border border-[#f0f0f0]">
+          <div className="flex gap-2 mb-6 p-1 rounded-md bg-white/[0.03] border border-white/[0.05]">
             {(['signin', 'magic'] as const).map((m) => (
               <button key={m} type="button" onClick={() => setMode(m)}
                 className={`flex-1 py-2.5 rounded-md text-sm font-bold transition-all cursor-pointer ${mode === m ? 'bg-white text-[#0a0e27] shadow-sm' : 'text-[#8a8a8a]'}`}>
@@ -96,7 +96,7 @@ export default function LoginPage() {
                 onChange={e => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
-                className="w-full rounded-[10px] px-5 py-4 text-sm font-bold outline-none border-2 border-[#f0f0f0] bg-white text-[#0a0e27] placeholder:text-[#8a8a8a]/50 transition-all focus:border-[#f0f0f0]"
+                className="w-full rounded-[16px] px-5 py-4 text-sm font-bold outline-none border-2 border-white/[0.08] bg-white/[0.03] text-white placeholder:text-[#8a8a8a]/50 transition-all focus:border-[#d4ff00]/30"
               />
             </div>
           </div>
@@ -112,14 +112,14 @@ export default function LoginPage() {
                   onChange={e => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  className="w-full rounded-[10px] px-5 py-4 text-sm font-bold outline-none border-2 border-[#f0f0f0] bg-white text-[#0a0e27] placeholder:text-[#8a8a8a]/50 transition-all focus:border-[#f0f0f0]"
+                  className="w-full rounded-[16px] px-5 py-4 text-sm font-bold outline-none border-2 border-white/[0.08] bg-white/[0.03] text-white placeholder:text-[#8a8a8a]/50 transition-all focus:border-[#d4ff00]/30"
                 />
               </div>
             </div>
           )}
 
           {message && (
-            <div className={`rounded-[10px] p-4 text-sm font-bold border ${message.type === 'error' ? 'bg-[#ff2d55]/[0.05] border-[#ff2d55]/20 text-[#ff2d55]' : 'bg-[#d4ff00]/[0.05] border-[#d4ff00]/20 text-[#0a0e27]'}`}>
+            <div className={`rounded-[16px] p-4 text-sm font-bold border ${message.type === 'error' ? 'bg-[#ff2d55]/[0.05] border-[#ff2d55]/20 text-[#ff2d55]' : 'bg-[#d4ff00]/[0.05] border-[#d4ff00]/20 text-[#d4ff00]'}`}>
               {message.text}
             </div>
           )}

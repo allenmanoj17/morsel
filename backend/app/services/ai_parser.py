@@ -68,17 +68,19 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
         print(f"DEBUG: AI Response received (length {len(raw_text)})")
 
         # Extract JSON using regex (handles chatty models/markdown)
+        print(f"DEBUG: Extracting JSON from raw response...")
         json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
         if not json_match:
-            print(f"ERROR: No JSON found in AI response. Raw text: {raw_text[:500]}")
+            print(f"CRITICAL ERROR: No JSON found in AI response. Raw text snippet: {raw_text[:300]}...")
             raise ValueError("No JSON found in AI response")
 
         # Validate JSON
         try:
             parsed = json.loads(json_match.group())
+            print(f"DEBUG: Successfully parsed JSON. Food: {parsed.get('meal_name')}")
         except json.JSONDecodeError as e:
-            print(f"ERROR: AI returned invalid JSON after extraction. Raw text: {raw_text[:500]}")
-            raise ValueError(f"Haiku returned invalid JSON: {str(e)}")
+            print(f"CRITICAL ERROR: JSON decoding failed: {str(e)}. Raw match: {json_match.group()[:200]}")
+            raise ValueError(f"Invalid JSON in AI response: {str(e)}")
 
         return {
             "parsed": parsed,
