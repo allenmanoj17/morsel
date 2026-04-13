@@ -221,6 +221,7 @@ def create_meal(
         "carbs_g":          body.carbs_g,
         "fat_g":            body.fat_g,
         "source_type":      body.source_type,
+        "meal_type":        body.meal_type,
         "food_item_id":     str(body.food_item_id) if body.food_item_id else None,
         "meal_template_id": str(body.meal_template_id) if body.meal_template_id else None,
         "confidence":       body.confidence,

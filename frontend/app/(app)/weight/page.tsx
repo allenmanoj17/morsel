@@ -59,10 +59,10 @@ export default function WeightPage() {
   const bmiLabel = bmi === null ? null : bmi < 18.5 ? 'Light' : bmi < 25 ? 'Healthy' : bmi < 30 ? 'Over' : 'High'
   const bmiColor = bmi === null ? '#8a8a8a' : bmi < 18.5 ? '#00d9ff' : bmi < 25 ? '#d4ff00' : '#ff2d55'
 
-  const TOOLTIP_STYLE = { backgroundColor: '#0a0e27', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 800, color: 'white' }
+  const TOOLTIP_STYLE = { backgroundColor: '#030409', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 800, color: 'white' }
 
   const S = {
-    container: { maxWidth: '480px', margin: '0 auto', padding: '24px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
+    container: { maxWidth: '480px', margin: '0 auto', padding: '24px 20px 120px', minHeight: '100dvh', background: '#030409', color: 'white' } as React.CSSProperties,
     card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '10px' } as React.CSSProperties
   }
@@ -152,7 +152,7 @@ export default function WeightPage() {
                 <input type="number" step="0.1" value={wVal} onChange={e => setWVal(e.target.value)} placeholder="00.0" 
                   style={{ flex: 1, border: 'none', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', padding: '16px', fontSize: '20px', fontWeight: 900, color: 'white', outline: 'none' }} />
                 <button onClick={handleSave} disabled={saving}
-                  style={{ background: '#d4ff00', color: '#0a0e27', borderRadius: '14px', padding: '0 24px', border: 'none', fontWeight: 900, fontSize: '13px', cursor: 'pointer' }}>
+                  style={{ background: '#d4ff00', color: '#030409', borderRadius: '14px', padding: '0 24px', border: 'none', fontWeight: 900, fontSize: '13px', cursor: 'pointer' }}>
                   {saving ? <Loader2 size={20} className="animate-spin" /> : 'Log Weight'}
                 </button>
              </div>

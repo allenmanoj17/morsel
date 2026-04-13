@@ -26,7 +26,7 @@ def get_onboarding(
         # Return a "Not yet onboarded" state instead of a 404
         return OnboardingResponse(
             user_id=user_id,
-            display_name="New User",
+            display_name=display_name,
             onboarding_completed=False
         )
     return resp.data[0]

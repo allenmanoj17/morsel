@@ -32,6 +32,15 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
     const now = new Date()
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   })
+  
+  const [mealType, setMealType] = useState(() => {
+    const hr = new Date().getHours()
+    if (hr >= 5 && hr < 11) return 'breakfast'
+    if (hr >= 11 && hr < 15) return 'lunch'
+    if (hr >= 15 && hr < 18) return 'snacks'
+    if (hr >= 18 && hr < 22) return 'dinner'
+    return 'snacks'
+  })
   const textRef = useRef<HTMLTextAreaElement>(null)
 
   const [editVals, setEditVals] = useState({ calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, meal_name: '' })
@@ -91,6 +100,7 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
         fat_g: editing ? editVals.fat_g : parsed.total_fat_g,
         source_type: parsed.source_type,
         confidence: parsed.overall_confidence,
+        meal_type: mealType,
       }, token)
       onSaved()
     } catch (e: any) {
@@ -101,12 +111,34 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
   }
 
   const S = {
-    overlay: { position: 'fixed', inset: 0, background: 'rgba(10,14,39,0.85)', backdropFilter: 'blur(16px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '16px' } as React.CSSProperties,
-    sheet: { width: '100%', maxWidth: '440px', background: '#12183d', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.08)', padding: '32px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' } as React.CSSProperties,
+    overlay: { 
+      position: 'fixed', 
+      inset: 0, 
+      background: 'rgba(3, 4, 9, 0.85)', 
+      backdropFilter: 'blur(24px)', 
+      zIndex: 100, 
+      display: 'flex', 
+      alignItems: 'flex-end', 
+      justifyContent: 'center', 
+      padding: '16px' 
+    } as React.CSSProperties,
+    sheet: { 
+      width: '100%', 
+      maxWidth: 'min(440px, calc(100vw - 32px))', 
+      maxHeight: 'min(720px, 90dvh)',
+      overflowY: 'auto' as const,
+      background: 'var(--background)', 
+      borderRadius: 'var(--card-radius)', 
+      border: '1px solid var(--glass-border)', 
+      padding: '32px', 
+      position: 'relative', 
+      boxShadow: '0 20px 50px rgba(0,0,0,0.7)',
+      scrollbarWidth: 'none' as const
+    } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '8px', display: 'block' } as React.CSSProperties,
-    input: { width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '18px', fontSize: '16px', fontWeight: 700, color: 'white', outline: 'none' } as React.CSSProperties,
-    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
-    btnMain: { width: '100%', background: '#d4ff00', color: '#0a0e27', borderRadius: '16px', padding: '18px', fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' } as React.CSSProperties,
+    input: { width: '100%', background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--input-radius)', padding: '18px', fontSize: '16px', fontWeight: 700, color: 'white', outline: 'none' } as React.CSSProperties,
+    card: { background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: '16px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
+    btnMain: { width: '100%', background: 'var(--accent)', color: '#030409', borderRadius: '16px', padding: '18px', fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' } as React.CSSProperties,
   }
 
   return (
@@ -115,12 +147,34 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
         
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.04em' }}>What's for breakfast?</h2>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.04em' }}>
+              Fueling your <span style={{ color: 'var(--accent)' }}>{mealType.replace('-', ' ')}</span>
+            </h2>
             <p style={{ fontSize: '11px', color: '#8a8a8a', fontWeight: 800 }}>Morsel Meal Logger ✨</p>
           </div>
           <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={18} color="white" />
           </button>
+        </div>
+
+        {/* Meal Type Selector */}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={S.label}>Category</label>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
+            {['breakfast', 'lunch', 'dinner', 'snacks', 'pre-workout', 'post-workout'].map(t => (
+              <button key={t} onClick={() => setMealType(t)}
+                style={{
+                  flexShrink: 0, padding: '10px 16px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
+                  background: mealType === t ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+                  color: mealType === t ? '#030409' : '#8a8a8a',
+                  border: mealType === t ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                  transition: 'all 0.2s ease',
+                  boxShadow: mealType === t ? '0 4px 15px rgba(212,255,0,0.3)' : 'none'
+                }}>
+                {t.replace('-', ' ')}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Input */}

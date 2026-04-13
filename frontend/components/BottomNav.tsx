@@ -19,11 +19,16 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{
-        background: 'rgba(10, 14, 39, 0.85)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        position: 'fixed',
+        bottom: 0,
+        top: 'auto',
+        left: 0,
+        right: 0,
+        background: 'var(--background)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        borderTop: '1px solid var(--glass-border)',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
-        boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+        boxShadow: '0 -10px 40px rgba(0,0,0,0.6)',
       }}
     >
       <div

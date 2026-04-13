@@ -9,6 +9,7 @@ import { Loader2, Save, Scale, ChevronRight, LogOut, User, Target as TargetIcon 
 interface Target {
   id: string; target_type: string; calories_target: number | null
   protein_target_g: number | null; carbs_target_g: number | null; fat_target_g: number | null
+  water_target_ml: number | null;
   effective_from: string
 }
 
@@ -39,7 +40,7 @@ export default function SettingsPage() {
   const router = useRouter()
 
   const [form, setForm] = useState({
-    calories_target: '', protein_target_g: '', carbs_target_g: '', fat_target_g: ''
+    calories_target: '', protein_target_g: '', carbs_target_g: '', fat_target_g: '', water_target_ml: '2500'
   })
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function SettingsPage() {
           protein_target_g: def.protein_target_g?.toString() || '',
           carbs_target_g: def.carbs_target_g?.toString() || '',
           fat_target_g: def.fat_target_g?.toString() || '',
+          water_target_ml: def.water_target_ml?.toString() || '2500',
         })
       } catch (e) { console.error(e) }
       finally { setLoading(false) }
@@ -80,6 +82,7 @@ export default function SettingsPage() {
         protein_target_g: form.protein_target_g ? parseFloat(form.protein_target_g) : null,
         carbs_target_g: form.carbs_target_g ? parseFloat(form.carbs_target_g) : null,
         fat_target_g: form.fat_target_g ? parseFloat(form.fat_target_g) : null,
+        water_target_ml: form.water_target_ml ? parseFloat(form.water_target_ml) : 2500,
         effective_from: new Date().toISOString().split('T')[0],
       }
       if (def) await api.updateTarget(def.id, body, token)
@@ -108,8 +111,17 @@ export default function SettingsPage() {
   }
 
   const S = {
-    container: { maxWidth: '480px', margin: '0 auto', padding: '24px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
-    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
+    container: { 
+      width: '100%',
+      maxWidth: '1200px', 
+      margin: '0 auto', 
+      padding: '24px 20px 140px', 
+      minHeight: '100dvh', 
+      background: '#030409', 
+      color: 'white',
+      boxSizing: 'border-box'
+    } as React.CSSProperties,
+    card: { background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--card-radius)', padding: '24px', marginBottom: '16px', backdropFilter: 'blur(16px)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px' } as React.CSSProperties
   }
 
@@ -117,8 +129,8 @@ export default function SettingsPage() {
     <div style={S.container}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em' }}>Profile</h1>
-        <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px' }}>Manage your account and goals ✨</p>
+        <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: '#d4ff00' }}>Settings</h1>
+        <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Customise your physiological targets ✨</p>
       </div>
 
       {/* ── Name ── */}
@@ -134,8 +146,8 @@ export default function SettingsPage() {
           />
         </div>
         <button onClick={handleSaveName} disabled={savingName}
-          style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#d4ff00', color: '#0a0e27', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {savingName ? <Loader2 size={16} className="animate-spin" /> : <Save size={18} />}
+          style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(212,255,0,0.3)' }}>
+          {savingName ? <Loader2 size={16} className="animate-spin" /> : <Save size={20} />}
         </button>
       </div>
 
@@ -150,14 +162,17 @@ export default function SettingsPage() {
             <Field id="set-prot"  label="Protein"  value={form.protein_target_g} onChange={v => setForm(f => ({ ...f, protein_target_g: v }))} suffix="g" />
             <Field id="set-carbs" label="Carbs"    value={form.carbs_target_g}   onChange={v => setForm(f => ({ ...f, carbs_target_g: v }))}   suffix="g" />
             <Field id="set-fat"   label="Fat"      value={form.fat_target_g}     onChange={v => setForm(f => ({ ...f, fat_target_g: v }))}     suffix="g" />
+            <Field id="set-water" label="Hydration" value={form.water_target_ml} onChange={v => setForm(f => ({ ...f, water_target_ml: v }))} suffix="ml" />
           </div>
           <button id="save-settings-btn" onClick={handleSave} disabled={saving}
             style={{
-              width: '100%', padding: '16px', borderRadius: '14px', border: 'none', cursor: 'pointer',
-              background: success ? '#d4ff00' : 'rgba(212,255,0,0.1)', color: success ? '#0a0e27' : '#d4ff00',
-              fontWeight: 900, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em',
+              width: '100%', padding: '18px', borderRadius: '16px', border: 'none', cursor: 'pointer',
+              background: success ? '#d4ff00' : 'rgba(212,255,0,0.15)', color: success ? '#030409' : '#d4ff00',
+              fontWeight: 900, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.12em',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
               transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+              boxShadow: success ? '0 8px 30px rgba(212,255,0,0.4)' : 'none',
+              border: success ? 'none' : '1px solid rgba(212,255,0,0.2)'
             }}>
             {saving ? <Loader2 size={16} className="animate-spin" /> : success ? 'Successfully Saved' : 'Save Goals'}
           </button>

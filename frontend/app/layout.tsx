@@ -20,20 +20,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         <meta name="theme-color" content="#d4ff00" />
       </head>
       <body
-        className={`${inter.className} antialiased`}
-        style={{ background: '#0a0e27', color: 'white', minHeight: '100dvh', margin: 0 }}
+        className={`${inter.className} antialiased bg-[#030409] text-white min-h-dvh`}
         suppressHydrationWarning
       >
         <Suspense fallback={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: '#0a0e27' }}>
-            <Loader2 className="animate-spin" color="#d4ff00" size={32} />
+          <div className="flex items-center justify-center min-h-dvh bg-[#030409]">
+            <Loader2 className="animate-spin text-[#d4ff00]" size={32} />
           </div>
         }>
           {children}

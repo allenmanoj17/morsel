@@ -28,7 +28,7 @@ interface MacroProgress {
 }
 interface Dashboard {
   date: string; calories: MacroProgress; protein: MacroProgress
-  carbs: MacroProgress; fat: MacroProgress
+  carbs: MacroProgress; fat: MacroProgress; water: MacroProgress
   adherence_score: number | null; entry_count: number
 }
 
@@ -42,9 +42,9 @@ function Ring({ pct, color, size = 72, stroke = 6, children }: {
   const dash = (filled / 100) * circ
   return (
     <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} />
       <circle
-        cx={size/2} cy={size/2} r={r} fill="none"
+        cx={size / 2} cy={size / 2} r={r} fill="none"
         stroke={color} strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={`${dash} ${circ}`}
@@ -72,8 +72,8 @@ function MacroRing({ label, value, target, percent, color, unit }: {
           {done
             ? <Check size={18} color="#d4ff00" strokeWidth={3} />
             : <span style={{ fontSize: '14px', fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>
-                {Math.round(value)}
-              </span>
+              {Math.round(value)}
+            </span>
           }
         </div>
       </div>
@@ -95,10 +95,10 @@ function DashboardContent() {
   const [token, setToken] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const today = new Date().toISOString().split('T')[0]
   const [selectedDate, setSelectedDate] = useState(today)
-  
+
   const [review, setReview] = useState<any>(null)
   const [generatingReview, setGeneratingReview] = useState(false)
   const [displayName, setDisplayName] = useState('')
@@ -116,9 +116,9 @@ function DashboardContent() {
       ])
       setDashboard(data)
       setRecentMeals(meals.slice(0, 3))
-      setWaterTotal(water.reduce((acc: number, curr: any) => acc + curr.amount_ml, 0))
+      setWaterTotal(data.water.consumed)
       setReview(null)
-    } catch (e: any) { 
+    } catch (e: any) {
       console.error('DASHBOARD_LOAD_ERROR:', e)
       if (e.message?.includes('404')) router.push('/onboarding')
       setError('Connection dropped. Is the server running?')
@@ -132,7 +132,7 @@ function DashboardContent() {
       if (session) {
         setToken(session.access_token)
         load(session.access_token, selectedDate)
-        
+
         const metaName = session.user.user_metadata?.display_name || session.user.user_metadata?.full_name
         setDisplayName(metaName || session.user.email?.split('@')[0] || '')
       } else { router.push('/login') }
@@ -143,7 +143,7 @@ function DashboardContent() {
     try {
       const res = await api.logWater({ date: selectedDate, amount_ml: amt }, token)
       setWaterTotal(res.amount_ml)
-    } catch {}
+    } catch { }
   }
 
   const handleReview = async () => {
@@ -155,13 +155,28 @@ function DashboardContent() {
     finally { setGeneratingReview(false) }
   }
 
+  const [greeting, setGreeting] = useState('Good day')
   const h = new Date().getHours()
-  const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+
+  useEffect(() => {
+    const hour = new Date().getHours()
+    setGreeting(hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening')
+  }, [])
+
   const isToday = selectedDate === today
 
   const S = {
-    container: { maxWidth: '480px', margin: '0 auto', padding: '24px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
-    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
+    container: {
+      width: '100%',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '24px 20px 140px',
+      minHeight: '100dvh',
+      background: '#030409',
+      color: 'white',
+      boxSizing: 'border-box'
+    } as React.CSSProperties,
+    card: { background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--card-radius)', padding: '24px', marginBottom: '16px', backdropFilter: 'blur(16px)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '8px' } as React.CSSProperties
   }
 
@@ -171,33 +186,33 @@ function DashboardContent() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-             <button onClick={() => setSelectedDate(offsetDate(selectedDate, -1))} style={{ padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>
-                <ChevronLeft size={14} color="white" />
-             </button>
-             <p style={{ ...S.label, marginBottom: 0, fontSize: '11px', color: 'white' }}>{friendlyDate(selectedDate)}</p>
-             <button onClick={() => setSelectedDate(offsetDate(selectedDate, 1))} disabled={isToday} 
-               style={{ padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: 'none', cursor: isToday ? 'not-allowed' : 'pointer', opacity: isToday ? 0.2 : 1 }}>
-                <ChevronRight size={14} color="white" />
-             </button>
+            <button onClick={() => setSelectedDate(offsetDate(selectedDate, -1))} style={{ padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: 'none', cursor: 'pointer' }}>
+              <ChevronLeft size={14} color="white" />
+            </button>
+            <p style={{ ...S.label, marginBottom: 0, fontSize: '11px', color: 'white' }}>{friendlyDate(selectedDate)}</p>
+            <button onClick={() => setSelectedDate(offsetDate(selectedDate, 1))} disabled={isToday}
+              style={{ padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: 'none', cursor: isToday ? 'not-allowed' : 'pointer', opacity: isToday ? 0.2 : 1 }}>
+              <ChevronRight size={14} color="white" />
+            </button>
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.1, marginTop: '12px' }}>
-            {greeting}{displayName ? `, ${displayName.split(' ')[0]}` : ''} ✨
+            <span style={{ color: '#d4ff00' }}>{greeting}</span>{displayName ? `, ${displayName.split(' ')[0]}` : ''} ✨
           </h1>
         </div>
       </div>
 
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {[1,2,3].map(i => <div key={i} style={{ ...S.card, height: '100px', opacity: 0.3 }} />)}
+          {[1, 2, 3].map(i => <div key={i} style={{ ...S.card, height: '100px', opacity: 0.3 }} />)}
         </div>
       ) : dashboard ? (
         <>
           {/* ── Macros ── */}
           <div style={{ ...S.card, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', padding: '24px 16px' }}>
             <MacroRing label="Cals" value={dashboard.calories.consumed} target={dashboard.calories.target} percent={dashboard.calories.percent} color="#00d9ff" unit="" />
-            <MacroRing label="Prot" value={dashboard.protein.consumed}  target={dashboard.protein.target}  percent={dashboard.protein.percent}  color="#d4ff00" unit="g" />
-            <MacroRing label="Carb" value={dashboard.carbs.consumed}    target={dashboard.carbs.target}    percent={dashboard.carbs.percent}    color="#ff2d55" unit="g" />
-            <MacroRing label="Fat"  value={dashboard.fat.consumed}      target={dashboard.fat.target}      percent={dashboard.fat.percent}      color="#8a8a8a" unit="g" />
+            <MacroRing label="Prot" value={dashboard.protein.consumed} target={dashboard.protein.target} percent={dashboard.protein.percent} color="#d4ff00" unit="g" />
+            <MacroRing label="Carb" value={dashboard.carbs.consumed} target={dashboard.carbs.target} percent={dashboard.carbs.percent} color="#ff2d55" unit="g" />
+            <MacroRing label="Fat" value={dashboard.fat.consumed} target={dashboard.fat.target} percent={dashboard.fat.percent} color="#8a8a8a" unit="g" />
           </div>
 
           {/* ── Progress Card ── */}
@@ -220,20 +235,25 @@ function DashboardContent() {
           </div>
 
           {/* ── Water Tracker ── */}
-          <div style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ width: '48px', height: '48px', background: 'rgba(0,217,255,0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                   <Droplets size={24} color="#00d9ff" />
+          <div style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: 'var(--glow-blue)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ position: 'relative', width: '56px', height: '56px' }}>
+                <Ring pct={dashboard.water.percent || 0} color="#00d9ff" size={56} stroke={4} />
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Droplets size={18} color="#00d9ff" />
                 </div>
-                <div>
-                   <p style={S.label}>Hydration</p>
-                   <p style={{ fontSize: '20px', fontWeight: 900 }}>{waterTotal} <span style={{ fontSize: '12px', color: '#8a8a8a' }}>ml</span></p>
-                </div>
-             </div>
-             <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => handleWater(-250)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: 'none', color: 'white', cursor: 'pointer' }}><Minus size={18} /></button>
-                <button onClick={() => handleWater(250)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(0,217,255,0.1)', border: 'none', color: '#00d9ff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '10px', fontWeight: 900 }}>+250</button>
-             </div>
+              </div>
+              <div>
+                <p style={S.label}>Hydration Progress</p>
+                <p style={{ fontSize: '20px', fontWeight: 900 }}>
+                  {dashboard.water.consumed} <span style={{ fontSize: '11px', color: '#8a8a8a', fontWeight: 600 }}>/ {dashboard.water.target || 2000}ml</span>
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => handleWater(-250)} style={{ width: '40px', height: '40px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Minus size={18} /></button>
+              <button onClick={() => handleWater(250)} style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(0,217,255,0.15)', border: '1px solid rgba(0,217,255,0.2)', color: '#00d9ff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '10px', fontWeight: 900, boxShadow: '0 4px 15px rgba(0,217,255,0.2)' }}>+250</button>
+            </div>
           </div>
 
           {/* ── Recent Meals ── */}
@@ -255,17 +275,17 @@ function DashboardContent() {
           )}
 
           {/* ── Coach ── */}
-          <div style={S.card}>
+          <div style={{ ...S.card, background: 'linear-gradient(135deg, rgba(212,255,0,0.05) 0%, rgba(3,4,9,0) 100%)', border: '1px solid rgba(212,255,0,0.15)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Zap size={18} color="#d4ff00" />
-                <p style={{ fontSize: '14px', fontWeight: 800 }}>Aussie Coach</p>
+                <Zap size={18} color="#d4ff00" style={{ filter: 'drop-shadow(0 0 5px #d4ff00)' }} />
+                <p style={{ fontSize: '14px', fontWeight: 800, color: '#d4ff00' }}>Coach</p>
               </div>
-              <button onClick={handleReview} disabled={generatingReview} style={{ background: '#d4ff00', color: '#0a0e27', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '11px', fontWeight: 900, cursor: 'pointer' }}>
+              <button onClick={handleReview} disabled={generatingReview} style={{ background: '#d4ff00', color: '#030409', border: 'none', borderRadius: '12px', padding: '10px 18px', fontSize: '11px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 20px rgba(212,255,0,0.3)' }}>
                 {generatingReview ? <Loader2 size={12} className="animate-spin" /> : 'Get Analysis'}
               </button>
             </div>
-            {review ? <p style={{ fontSize: '13px', lineHeight: 1.6, color: '#8a8a8a' }}>{review.summary}</p> : <p style={{ fontSize: '12px', color: '#5a5a5a' }}>Log your meals for a personalized daily summary.</p>}
+            {review ? <p style={{ fontSize: '13px', lineHeight: 1.6, color: '#e0e0e0' }}>{review.summary}</p> : <p style={{ fontSize: '12px', color: '#8a8a8a' }}>Log your meals for a personalized daily summary.</p>}
           </div>
         </>
       ) : error ? (
@@ -273,7 +293,7 @@ function DashboardContent() {
       ) : null}
 
       {/* FAB */}
-      <button onClick={() => setShowAdd(true)} style={{ position: 'fixed', bottom: '92px', left: '50%', transform: 'translateX(-50%)', width: '60px', height: '60px', borderRadius: '18px', background: '#d4ff00', color: '#0a0e27', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 30px rgba(212,255,0,0.3)', zIndex: 50 }}><Plus size={28} strokeWidth={3} /></button>
+      <button onClick={() => setShowAdd(true)} style={{ position: 'fixed', bottom: '92px', left: '50%', transform: 'translateX(-50%)', width: '60px', height: '60px', borderRadius: '18px', background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 30px rgba(212,255,0,0.3)', zIndex: 50 }}><Plus size={28} strokeWidth={3} /></button>
 
       {showAdd && <QuickAddModal token={token} initialDate={selectedDate} onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); load(token, selectedDate) }} />}
     </div>
@@ -281,5 +301,5 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return <Suspense fallback={<div style={{ minHeight: '100dvh', background: '#0a0e27' }} />}><DashboardContent /></Suspense>
+  return <Suspense fallback={<div style={{ minHeight: '100dvh', background: '#030409' }} />}><DashboardContent /></Suspense>
 }

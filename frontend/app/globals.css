@@ -1,16 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "../app";
+@source "../components";
 
 :root {
-  --background: #0a0e27;
+  --background: #030409;
   --foreground: #ffffff;
   --accent: #d4ff00;
-  --accent-muted: rgba(212, 255, 0, 0.1);
+  --accent-muted: rgba(212, 255, 0, 0.12);
   --glass: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --card-radius: 24px;
-  --input-radius: 16px;
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-glow: rgba(255, 255, 255, 0.05);
+  --card-radius: 28px;
+  --input-radius: 18px;
+  --glow-lime: 0 0 20px rgba(212, 255, 0, 0.15);
+  --glow-blue: 0 0 20px rgba(0, 217, 255, 0.15);
+  --glow-ruby: 0 0 20px rgba(255, 45, 85, 0.15);
 }
 
 * {
@@ -88,8 +92,26 @@ input:focus {
   to { opacity: 1; }
 }
 
+@keyframes pulse-gentle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.1); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 8s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite;
 }
 
 /* ── Scrollbars ── */

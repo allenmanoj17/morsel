@@ -8,13 +8,30 @@ async function apiFetch(path: string, options: RequestInit = {}, token?: string)
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || 'API error')
+
+  try {
+    const controller = new AbortController()
+    const id = setTimeout(() => controller.abort(), 8000) // 8s timeout
+
+    const res = await fetch(`${API_URL}${path}`, { 
+      ...options, 
+      headers,
+      signal: controller.signal 
+    })
+    
+    clearTimeout(id)
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error(err.detail || `API error: ${res.status}`)
+    }
+    if (res.status === 204) return null
+    return res.json()
+  } catch (e: any) {
+    if (e.name === 'AbortError') throw new Error('Request timed out. Is the backend server stable?')
+    if (e.message?.includes('fetch')) throw new Error('Cannot connect to backend. Please check if uvicorn is running on port 8000.')
+    throw e
   }
-  if (res.status === 204) return null
-  return res.json()
 }
 
 export const api = {
@@ -87,6 +104,9 @@ export const api = {
 
   getAnalyticsTrends: (days: number, token: string) =>
     apiFetch(`/api/analytics/trends?days=${days}`, {}, token),
+
+  getMealStats: (days: number, token: string) =>
+    apiFetch(`/api/analytics/meal-stats?days=${days}`, {}, token),
 
   // Review
   generateEODReview: (date: string, token: string) =>

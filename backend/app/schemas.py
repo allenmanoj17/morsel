@@ -41,6 +41,7 @@ class TargetCreate(BaseModel):
     protein_target_g: Optional[float] = None
     carbs_target_g: Optional[float] = None
     fat_target_g: Optional[float] = None
+    water_target_ml: Optional[float] = 2500
     effective_from: date
     effective_to: Optional[date] = None
 
@@ -51,6 +52,7 @@ class TargetUpdate(BaseModel):
     protein_target_g: Optional[float] = None
     carbs_target_g: Optional[float] = None
     fat_target_g: Optional[float] = None
+    water_target_ml: Optional[float] = None
     effective_to: Optional[date] = None
 
 
@@ -62,6 +64,7 @@ class TargetResponse(BaseModel):
     protein_target_g: Optional[float]
     carbs_target_g: Optional[float]
     fat_target_g: Optional[float]
+    water_target_ml: Optional[float]
     effective_from: date
     effective_to: Optional[date]
     created_at: datetime
@@ -112,6 +115,7 @@ class MealEntryCreate(BaseModel):
     carbs_g: float
     fat_g: float
     source_type: str  # ai, db, template, manual
+    meal_type: str = "snack"  # breakfast, snack, lunch, pre-workout, post-workout, dinner
     food_item_id: Optional[UUID] = None
     meal_template_id: Optional[UUID] = None
     confidence: Optional[float] = None
@@ -124,6 +128,7 @@ class MealEntryUpdate(BaseModel):
     protein_g: Optional[float] = None
     carbs_g: Optional[float] = None
     fat_g: Optional[float] = None
+    meal_type: Optional[str] = None
     notes: Optional[str] = None
     logged_at: Optional[datetime] = None
 
@@ -135,6 +140,7 @@ class MealEntryResponse(BaseModel):
     entry_text_raw: str
     logged_at: datetime
     meal_date: date
+    meal_type: str
     calories: float
     protein_g: float
     carbs_g: float
@@ -168,6 +174,7 @@ class DailyDashboardResponse(BaseModel):
     carbs: MacroProgress
     fat: MacroProgress
     adherence_score: Optional[float]
+    water: Optional[MacroProgress] = None
     entry_count: int
     entries: List[MealEntryResponse]
 
@@ -263,13 +270,32 @@ class AnalyticsWeeklyResponse(BaseModel):
     protein_pct: Optional[float] = 0
     carbs_pct: Optional[float] = 0
     fat_pct: Optional[float] = 0
+    avg_water_ml: Optional[float] = 0
 
 
 class AnalyticsTrendsResponse(BaseModel):
     dates: List[date]
     calories: List[float]
     protein: List[float]
+    water: List[float]
+    weight: List[Optional[float]]
     adherence: List[Optional[float]]
+
+
+class AnalyticMealTypeDist(BaseModel):
+    type: str
+    count: int
+    avg_calories: float
+
+
+class AnalyticTimeDist(BaseModel):
+    hour: int
+    count: int
+
+
+class AnalyticsMealStatsResponse(BaseModel):
+    type_distribution: List[AnalyticMealTypeDist]
+    time_distribution: List[AnalyticTimeDist]
 
 
 # ─── Weights ──────────────────────────────────────────────────────────────────

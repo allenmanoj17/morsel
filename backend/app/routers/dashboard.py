@@ -62,6 +62,11 @@ def get_daily_dashboard(
     prot_target  = float(target["protein_target_g"])  if target and target.get("protein_target_g")  else None
     carbs_target = float(target["carbs_target_g"])    if target and target.get("carbs_target_g")    else None
     fat_target   = float(target["fat_target_g"])      if target and target.get("fat_target_g")      else None
+    water_target = float(target["water_target_ml"])   if target and target.get("water_target_ml")   else None
+
+    # Water consumed
+    w_resp = supabase.table("water_logs").select("amount_ml").eq("user_id", user_id).eq("date", date).execute()
+    water_consumed = sum(entry["amount_ml"] for entry in w_resp.data) if w_resp.data else 0
 
     # Adherence from rollup
     r_resp = (
@@ -82,6 +87,7 @@ def get_daily_dashboard(
         protein=_make_progress(prot, prot_target),
         carbs=_make_progress(carbs, carbs_target),
         fat=_make_progress(fat, fat_target),
+        water=_make_progress(water_consumed, water_target),
         adherence_score=adherence_score,
         entry_count=len(entries),
         entries=entries,

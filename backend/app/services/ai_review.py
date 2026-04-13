@@ -4,11 +4,20 @@ import anthropic
 import re
 from app.config import get_settings
 
-settings = get_settings()
-# Upgraded to Claude 4.5 Sonnet identifier (corrected)
-MODEL = "claude-sonnet-4-5" 
+from functools import lru_cache
+from app.config import get_settings
 
-client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+# Correcting to standard Claude 3.5 Sonnet identifier
+MODEL = "claude-3-5-sonnet-20241022" 
+
+@lru_cache()
+def get_anthropic_client():
+    """
+    Returns a singleton AsyncAnthropic client initialized only when needed.
+    This prevents 'SpawnProcess-1' errors during uvicorn reload on macOS.
+    """
+    settings = get_settings()
+    return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 async def review_day_with_sonnet(day_str: str, entries_data: list, totals: dict, targets: dict, flags: list) -> dict:
     """
@@ -39,6 +48,7 @@ async def review_day_with_sonnet(day_str: str, entries_data: list, totals: dict,
     })
 
     try:
+        client = get_anthropic_client()
         response = await client.messages.create(
             model=MODEL,
             max_tokens=800,

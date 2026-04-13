@@ -1,10 +1,10 @@
 # 🚀 Morsel Deployment Masterclass
 
-Deploying Morsel correctly ensures that your AI Coach and Sydney-localized tracking work seamlessly in the cloud. Follow these steps exactly.
+Deploying Morsel correctly ensures that your AI Coach, Behavioral Analytics, and Sydney-localized tracking work seamlessly in the cloud. Follow these steps exactly.
 
 ---
 
-## 🏛️ Phase 1: The Backend (Render.com)
+## 🏗️ Phase 1: The Backend (Render.com)
 
 We deploy the backend first because the frontend needs the "Backend URL" to work.
 
@@ -14,16 +14,16 @@ We deploy the backend first because the frontend needs the "Backend URL" to work
 4.  **Configure Settings**:
     - **Name**: `morsel-api`
     - **Environment**: `Python 3`
-    - **Build Command**: `pip install -r requirements.txt` (Make sure the Root Directory is `backend`)
+    - **Build Command**: `pip install -r requirements.txt` (Set Root Directory to `backend`)
     - **Start Command**: `gunicorn -k uvicorn.workers.UvicornWorker app.main:app`
 5.  **Environment Variables**: Click "Advanced" -> "Add Environment Variable":
     - `SUPABASE_URL`: (From your Supabase settings)
     - `SUPABASE_SERVICE_ROLE_KEY`: (From Supabase -> API)
+    - `SUPABASE_ANON_KEY`: (From Supabase -> API)
+    - `SUPABASE_JWT_SECRET`: (From Supabase -> API Settings)
     - `ANTHROPIC_API_KEY`: (Your Claude key)
-    - `CORS_ORIGINS`: `https://your-morsel-frontend.vercel.app` (You'll update this once Vercel is ready)
-6.  **Deploy**: Click **Create Web Service**.
-    > [!IMPORTANT]
-    > Note down your **Render URL** (e.g., `https://morsel-api.onrender.com`). You need this for Phase 2.
+    - `CORS_ORIGINS`: `https://your-morsel-frontend.vercel.app` (Update once Vercel is ready)
+    - `APP_ENV`: `production`
 
 ---
 
@@ -34,39 +34,36 @@ We deploy the backend first because the frontend needs the "Backend URL" to work
 3.  Import the same `morsel` repository.
 4.  **Configure Settings**:
     - **Framework Preset**: `Next.js`
-    - **Root Directory**: `frontend` (Click "Edit" and select the `frontend` folder)
+    - **Root Directory**: `frontend` (Click "Edit" and select the folder)
 5.  **Environment Variables**:
     - `NEXT_PUBLIC_SUPABASE_URL`: (Same as backend)
-    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: (From Supabase -> API)
-    - `NEXT_PUBLIC_API_URL`: `https://your-morsel-api.onrender.com` (Your Render URL)
+    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: (Same as backend)
+    - `NEXT_PUBLIC_API_URL`: `https://morsel-api.onrender.com` (Your Render URL)
 6.  **Deploy**: Click **Deploy**.
 
 ---
 
-## 🔐 Phase 3: The Security Handshake (Supabase & CORS)
+## 🔐 Phase 3: The Security Handshake
 
-Now that both sites are live, they need permission to talk to each other.
-
-### 1. Update Supabase
-1.  Go to your **Supabase Dashboard**.
-2.  Navigate to **Authentication** -> **URL Configuration**.
-3.  Add your Vercel URL (e.g., `https://morsel-app.vercel.app`) to the **Redirect URLs**.
-
-### 2. Update Render CORS
-1.  Go back to **Render.com**.
-2.  Select your `morsel-api` service.
-3.  Go to **Environment**.
-4.  Change `CORS_ORIGINS` to your final Vercel URL.
-5.  Render will auto-redeploy.
+1.  **Supabase Redirects**: Navigate to **Authentication** -> **URL Configuration**. Add your Vercel URL (e.g., `https://morsel-app.vercel.app`) to the **Redirect URLs**.
+2.  **CORS Lock**: Go back to **Render.com** and update `CORS_ORIGINS` to your final Vercel domain. This restricts API access to only your authorized frontend.
 
 ---
 
-## ✅ Phase 4: Verification
+## 📱 Phase 4: PWA Installation
 
-1.  Open your Vercel URL.
-2.  If you see the **Login Page**, success!
-3.  Try logging a meal. If it analyzes correctly, your **Render + Anthropic** connection is perfect.
-4.  Check the **Performance Tab** to ensure charts are rendering.
+Once live, open your Vercel URL in Safari (iOS) or Chrome (Android):
+1.  **iOS**: Tap the **Share** button and select **"Add to Home Screen"**.
+2.  **Android**: Tap the **MenuDots** (bottom right) and select **"Install App"**.
+3.  Morsel will now launch as a **Standalone Standalone App** with the optimized Obsidian Focus aesthetic.
+
+---
+
+## ✅ Phase 5: final Verification
+
+1.  **Auth**: Ensure you can sign in and complete the high-fidelity onboarding journey.
+2.  **Logging**: Verify that the AI analyzes your meals and applies the correct **Meal Type**.
+3.  **Analytics**: Check the **Performance** tab after a few meals to see the **Fueling Schedule** and **Composition** charts populating.
 
 ---
 

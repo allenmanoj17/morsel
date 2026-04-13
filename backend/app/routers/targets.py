@@ -39,6 +39,7 @@ def create_target(
         "protein_target_g": body.protein_target_g,
         "carbs_target_g":   body.carbs_target_g,
         "fat_target_g":     body.fat_target_g,
+        "water_target_ml":   body.water_target_ml,
         "effective_from":   body.effective_from.isoformat(),
         "effective_to":     body.effective_to.isoformat() if body.effective_to else None,
         "created_at":       now,

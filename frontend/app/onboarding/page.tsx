@@ -115,19 +115,19 @@ export default function OnboardingPage() {
   }
 
   const S = {
-    container: { background: '#0a0e27', minHeight: '100dvh', color: 'white', padding: '32px 24px', display: 'flex', flexDirection: 'column' } as React.CSSProperties,
+    container: { background: '#030409', minHeight: '100dvh', color: 'white', padding: '32px 24px', display: 'flex', flexDirection: 'column' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' as const, letterSpacing: '0.2em', color: '#8a8a8a', marginBottom: '8px', display: 'block' } as React.CSSProperties,
     h1: { fontSize: '36px', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: '24px' } as any,
-    input: { width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px 20px', fontSize: '16px', fontWeight: 700, color: 'white', outline: 'none' } as React.CSSProperties,
-    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '20px', marginBottom: '16px' } as React.CSSProperties,
-    btnNext: { background: '#d4ff00', color: '#0a0e27', borderRadius: '16px', padding: '18px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' } as React.CSSProperties,
+    input: { width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '16px 20px', fontSize: '16px', fontWeight: 700, color: 'white', outline: 'none', transition: 'all 0.2s' } as React.CSSProperties,
+    card: { background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: '20px', padding: '24px', marginBottom: '16px', backdropFilter: 'blur(16px)' } as React.CSSProperties,
+    btnNext: { background: 'var(--accent)', color: '#030409', borderRadius: '18px', padding: '18px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 8px 30px rgba(212,255,0,0.2)' } as React.CSSProperties,
   }
 
   return (
     <div style={S.container}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
-         <div style={{ width: '32px', height: '32px', background: '#d4ff00', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0e27', fontWeight: 900 }}>M</div>
+         <div style={{ width: '32px', height: '32px', background: 'var(--accent)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#030409', fontWeight: 900 }}>M</div>
          <span style={{ fontSize: '14px', fontWeight: 800 }}>Morsel Nutrition</span>
       </div>
 
@@ -261,8 +261,8 @@ export default function OnboardingPage() {
         {/* Step 5: Ready */}
         {stepIdx === 5 && (
           <div className="animate-in fade-in zoom-in-95 duration-700" style={{ textAlign: 'center' }}>
-             <div style={{ width: '72px', height: '72px', background: '#d4ff00', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px' }}>
-                <Zap size={36} color="#0a0e27" fill="#0a0e27" />
+             <div style={{ width: '72px', height: '72px', background: 'var(--accent)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px', boxShadow: '0 0 50px rgba(212,255,0,0.3)' }}>
+                <Zap size={36} color="#030409" fill="#030409" />
              </div>
              <h1 style={S.h1}>Ready to go!</h1>
              <p style={{ fontSize: '15px', color: '#8a8a8a', lineHeight: 1.6, marginBottom: '48px' }}>Your plan is loaded. You can now start logging your meals and tracking your progress.</p>

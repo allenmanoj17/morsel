@@ -9,7 +9,7 @@ import QuickAddModal from '@/components/QuickAddModal'
 interface MealEntry {
   id: string; meal_name: string; entry_text_raw: string; logged_at: string
   calories: number; protein_g: number; carbs_g: number; fat_g: number
-  source_type: string; notes?: string
+  source_type: string; meal_type: string; notes?: string
 }
 
 const SRC_COLOR: Record<string, string> = { ai: '#d4ff00', db: '#00d9ff', template: 'white', manual: '#8a8a8a' }
@@ -36,8 +36,8 @@ function EditModal({ entry, token, onClose, onSaved }: {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '16px' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,14,39,0.8)', backdropFilter: 'blur(16px)' }} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: '440px', background: '#12183d', borderRadius: '32px', padding: '32px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(3, 4, 9, 0.8)', backdropFilter: 'blur(24px)' }} />
+      <div style={{ position: 'relative', width: '100%', maxWidth: '440px', background: 'var(--background)', borderRadius: 'var(--card-radius)', padding: '32px', border: '1px solid var(--glass-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.7)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'white', letterSpacing: '-0.04em' }}>Edit Entry</h2>
           <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -70,7 +70,7 @@ function EditModal({ entry, token, onClose, onSaved }: {
             } catch {} finally { setSaving(false) }
           }}
           disabled={saving}
-          style={{ width: '100%', padding: '18px', borderRadius: '16px', background: '#d4ff00', color: '#0a0e27', border: 'none', fontWeight: 900, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          style={{ width: '100%', padding: '18px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', fontWeight: 900, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
         >
           {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={20} /> Save Changes</>}
         </button>
@@ -99,8 +99,14 @@ export default function LogPage() {
   const [token, setToken] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [editEntry, setEditEntry] = useState<MealEntry | null>(null)
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
-  const today = new Date().toISOString().split('T')[0]
+  const [date, setDate] = useState('')
+  const [today, setToday] = useState('')
+
+  useEffect(() => {
+    const t = new Date().toISOString().split('T')[0]
+    setToday(t)
+    setDate(t)
+  }, [])
 
   const load = useCallback(async (tok: string, d: string) => {
     setLoading(true)
@@ -135,8 +141,17 @@ export default function LogPage() {
   const isToday = date === today
 
   const S = {
-    container: { maxWidth: '480px', margin: '0 auto', padding: '24px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
-    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
+    container: { 
+      width: '100%',
+      maxWidth: '1200px', 
+      margin: '0 auto', 
+      padding: '24px 20px 140px', 
+      minHeight: '100dvh', 
+      background: '#030409', 
+      color: 'white',
+      boxSizing: 'border-box'
+    } as React.CSSProperties,
+    card: { background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--card-radius)', padding: '24px', marginBottom: '16px', backdropFilter: 'blur(16px)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px' } as React.CSSProperties
   }
 
@@ -146,7 +161,7 @@ export default function LogPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
         <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em' }}>Meal Log</h1>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: '#d4ff00' }}>Meal Log</h1>
           <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Your daily food history ✨</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '8px' }}>
@@ -181,6 +196,8 @@ export default function LogPage() {
                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                       <span style={{ fontSize: '10px', fontWeight: 900, color: SRC_COLOR[entry.source_type] || 'white' }}>{SRC_LABEL[entry.source_type] || 'MANUAL'}</span>
                       <span style={{ width: '4px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.1)' }} />
+                      <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase' }}>{entry.meal_type?.replace('-', ' ')}</span>
+                      <span style={{ width: '4px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.1)' }} />
                       <span style={{ fontSize: '10px', fontWeight: 800, color: '#8a8a8a' }}>{formatTime(entry.logged_at)}</span>
                    </div>
                    <h3 style={{ fontSize: '18px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.meal_name}</h3>
@@ -214,7 +231,7 @@ export default function LogPage() {
 
       {/* FAB */}
       {isToday && (
-        <button onClick={() => setShowAdd(true)} style={{ position: 'fixed', bottom: '88px', left: '50%', transform: 'translateX(-50%)', width: '64px', height: '64px', borderRadius: '20px', background: '#d4ff00', color: '#0a0e27', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(212,255,0,0.4)', zIndex: 50 }}>
+        <button onClick={() => setShowAdd(true)} style={{ position: 'fixed', bottom: '92px', left: '50%', transform: 'translateX(-50%)', width: '64px', height: '64px', borderRadius: '22px', background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(212,255,0,0.4)', zIndex: 50 }}>
           <Plus size={32} strokeWidth={3} />
         </button>
       )}

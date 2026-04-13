@@ -70,7 +70,7 @@ function TemplateModal({ tpl, token, onClose, onSaved }: {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,14,39,0.7)', backdropFilter: 'blur(12px)' }} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: '540px', background: '#0a0e27', borderRadius: '32px 32px 0 0', padding: '32px 24px 48px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+      <div style={{ position: 'relative', width: '100%', maxWidth: '540px', background: '#030409', borderRadius: '32px 32px 0 0', padding: '32px 24px 48px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ width: '40px', height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', margin: '0 auto 24px' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
           <div>
@@ -97,7 +97,7 @@ function TemplateModal({ tpl, token, onClose, onSaved }: {
 
         <button onClick={handleSave} disabled={saving}
           style={{
-            width: '100%', padding: '20px', borderRadius: '18px', background: '#d4ff00', color: '#0a0e27',
+            width: '100%', padding: '20px', borderRadius: '18px', background: '#d4ff00', color: '#030409',
             border: 'none', fontWeight: 900, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.12em',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
             boxShadow: '0 12px 32px rgba(212,255,0,0.3)', transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)'
@@ -154,7 +154,7 @@ export default function TemplatesPage() {
   }
 
   const S = {
-    container: { maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#0a0e27', color: 'white' } as React.CSSProperties,
+    container: { maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#030409', color: 'white' } as React.CSSProperties,
     card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px' } as React.CSSProperties
   }
@@ -224,7 +224,7 @@ export default function TemplatesPage() {
               <button onClick={() => handleLog(tpl.id)}
                 style={{
                   width: '100%', padding: '16px', borderRadius: '14px', border: 'none',
-                  background: '#d4ff00', color: '#0a0e27', fontWeight: 900, fontSize: '12px',
+                  background: '#d4ff00', color: '#030409', fontWeight: 900, fontSize: '12px',
                   textTransform: 'uppercase', letterSpacing: '0.12em', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                   transition: 'all 0.1s ease', boxShadow: '0 8px 16px rgba(212,255,0,0.1)'
@@ -243,7 +243,7 @@ export default function TemplatesPage() {
         style={{
           position: 'fixed', bottom: '88px', left: '50%', transform: 'translateX(-50%)',
           width: '64px', height: '64px', borderRadius: '20px',
-          background: '#d4ff00', color: '#0a0e27', border: 'none', cursor: 'pointer',
+          background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 12px 40px rgba(212,255,0,0.4)', zIndex: 50,
         }}

@@ -27,6 +27,7 @@ create table if not exists public.daily_targets (
   fat_target_g      numeric(8,2),
   effective_from    date not null,
   effective_to      date,
+  water_target_ml   numeric(8,2) default 2500,
   created_at        timestamptz default now(),
   updated_at        timestamptz default now()
 );
@@ -83,6 +84,7 @@ create table if not exists public.meal_entries (
   carbs_g           numeric(8,2) not null,
   fat_g             numeric(8,2) not null,
   source_type       text not null,  -- ai | db | template | manual
+  meal_type         text not null default 'snack', -- breakfast | snack | lunch | pre-workout | post-workout | dinner
   food_item_id      uuid references public.food_items(id),
   meal_template_id  uuid references public.meal_templates(id),
   confidence        numeric(4,3),
@@ -106,6 +108,7 @@ create table if not exists public.daily_rollups (
   adherence_score       numeric(5,2),
   hit_calorie_target    boolean,
   hit_protein_target    boolean,
+  water_total_ml        numeric(8,2) default 0,
   validation_flags      jsonb,
   created_at            timestamptz default now(),
   updated_at            timestamptz default now(),

@@ -1,62 +1,82 @@
-# Morsel — Pro Nutrition Tracker (Sydney Edition) 🇦🇺💪
+# Morsel
 
-Morsel is a high-performance, AI-powered nutrition tracking application designed for precision, speed, and deep insights. Localized natively for the **Australia/Sydney** timezone, Morsel combines the power of Claude 3.5 Sonnet and Haiku to transform how you log and analyze your fuel.
+Morsel is an AI-powered nutrition tracking and behavioral analytics platform. It leverages advanced natural language processing to simplify meal logging and provides personalized insights to help users understand and optimize their dietary habits.
 
-![Morsel Banner](https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=1200)
-
-## ✨ Core Features
-
-- **🇦🇺 Australia/Sydney Native**: All tracking, streaks, and analytics are localized to Sydney time for flawless regional accuracy.
-- **🤖 Intelligence Engine**:
-    - **Quick Analysis**: Haiku-powered parsing (log "Double shot flat white" or "Grilled chicken salad" instantly).
-    - **AI Coach**: Sonnet-powered end-of-day reviews with deep behavioral insights.
-- **🧠 Smart Onboarding**: Built-in TDEE/Macro calculator (Mifflin-St Jeor) to auto-generate your ideal targets.
-- **📊 Performance Analytics**:
-    - **Consistency Heartbeat**: 28-day adherence heatmap.
-    - **Macro Strategy Mix**: Pro donut charts and trend visualizations.
-- **🚀 One-Click PWA**: Ready for deployment to Render (Backend) and Vercel (Frontend).
-
-## 🛠️ Technology Stack
-
-- **Frontend**: Next.js 16 (App Router), Tailwind CSS v4, Lucide Icons, Recharts.
-- **Backend**: FastAPI (Python 3.9+), Supabase (Auth, DB, RLS), Anthropic SDK (Claude 3.5).
-- **Security**: Environment-aware CORS, JWT-based Supabase Auth.
-
-## 📥 Local Setup
-
-### 1. Backend
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-# Create .env with SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and ANTHROPIC_API_KEY
-uvicorn app.main:app --reload
-```
-
-### 2. Frontend
-```bash
-cd frontend
-npm install
-# Create .env.local with NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and NEXT_PUBLIC_API_URL
-npm run dev
-```
-
-## 🚀 Deployment Guide
-
-### Backend (Render)
-1. Link your GitHub repo to **Render.com**.
-2. Create a **Web Service**.
-3. **Build Command**: `pip install -r requirements.txt`
-4. **Start Command**: `gunicorn -k uvicorn.workers.UvicornWorker app.main:app`
-5. Add your Environment Variables.
-
-### Frontend (Vercel)
-1. Link the same repo to **Vercel.com**.
-2. Select the `frontend` directory.
-3. Vercel automatically detects Next.js.
-4. Add your `.env.local` keys to Vercel's **Environment Variables**.
+[![Frontend Deployment](https://img.shields.io/badge/Frontend-Vercel-black?style=flat-square&logo=vercel)](https://morsel-log.vercel.app)
+[![Backend Deployment](https://img.shields.io/badge/Backend-Render-46E3B7?style=flat-square&logo=render)](https://morsel-api.onrender.com)
+[![License](https://img.shields.io/badge/License-MIT-d4ff00?style=flat-square)](LICENSE)
 
 ---
 
-Generated with ✨ by [Morsel](https://github.com/allenmanoj17/morsel)
+## Overview
+
+Morsel removes the friction from traditional calorie tracking. By utilizing a dual-engine LLM architecture, users can simply type what they ate, and the platform automatically extracts the caloric value, macronutrients, and contextual meal timing. The application is built as a Progressive Web App (PWA) with a minimalist, high-contrast UI designed for rapid daily usage.
+
+## Core Features
+
+- **Natural Language Logging**: Input meals as raw text (e.g., "Two scrambled eggs and a black coffee") and let AI instantly parse the nutritional data.
+- **Automated AI Coaching**: Generate comprehensive end-of-day nutritional reviews and behavioral insights.
+- **Behavioral Analytics**:
+  - **Meal Distribution**: Track eating frequency and meal timing patterns over a 24-hour cycle.
+  - **Adherence Heatmaps**: Visualize daily calorie and macro consistency over 28-day periods.
+  - **Hydration Tracking**: Integrated fluid intake monitoring natively built into the dashboard.
+- **Progressive Web App (PWA)**: Fully optimized for standalone installation on iOS and Android devices.
+- **Secure Authentication**: Utilizing Supabase for secure password and Magic Link sign-ins.
+
+## Tech Stack
+
+### Frontend
+- Next.js 16 (App Router)
+- React 19
+- Tailwind CSS v4
+- Recharts (Data Visualization)
+- Lucide React (Iconography)
+
+### Backend
+- FastAPI (Python 3.12)
+- Pydantic (Data Validation & Modeling)
+- Uvicorn / Gunicorn (ASGI Server)
+
+### Infrastructure & Services
+- **Database & Auth**: Supabase (PostgreSQL, Row Level Security)
+- **AI Processing**: Anthropic (Claude 3 Haiku for high-speed parsing, Claude 3.5 Sonnet for deep analytics)
+- **Hosting**: Vercel (Frontend), Render (Backend)
+
+---
+
+## Local Development
+
+### Prerequisites
+- Node.js (v18 or higher)
+- Python 3.12+
+- Supabase Account & Project
+- Anthropic API Key
+
+### Backend Setup
+1. Navigate to the backend directory: `cd backend`
+2. Create a virtual environment: `python -m venv venv && source venv/bin/activate`
+3. Install dependencies: `pip install -r requirements.txt`
+4. Configure `.env` with your `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `ANTHROPIC_API_KEY`.
+5. Run the dev server: `uvicorn app.main:app --reload --port 8000`
+
+### Frontend Setup
+1. Navigate to the frontend directory: `cd frontend`
+2. Install dependencies: `npm install`
+3. Configure `.env.local` with your `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+4. Start the development server: `npm run dev`
+5. Access the application at `http://localhost:3000`.
+
+## Deployment
+
+Refer to the included `DEPLOYMENT_GUIDE.md` for explicit instructions on preparing the Next.js frontend for Vercel and configuring the FastAPI backend for Render.
+
+## Contributing
+
+We welcome technical contributions to the Morsel ecosystem. 
+
+1. Fork the repository at `github.com/allenmanoj17/morsel`.
+2. Ensure new UI components adhere to the existing design system (Obsidian backgrounds with Electric Lime `#d4ff00` accents).
+3. Submit a Pull Request documenting your changes and rationale.
+
+---
+Built by [Morsel Team](https://github.com/allenmanoj17/morsel)

@@ -18,11 +18,16 @@ export default function SideNav() {
   return (
     <nav
       className="fixed top-0 left-0 bottom-0 w-64 hidden md:flex flex-col z-40"
-      style={{ borderRight: '1px solid rgba(255,255,255,0.05)', background: '#0a0e27' }}
+      style={{ 
+        borderRight: '1px solid var(--glass-border)', 
+        background: 'var(--background)',
+        height: '100dvh',
+        boxSizing: 'border-box'
+      }}
     >
       {/* Brand */}
       <div className="px-8 pt-10 pb-8 flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl bg-[#d4ff00] text-[#0a0e27] shadow-[0_0_20px_rgba(212,255,0,0.2)]">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xl bg-[#d4ff00] text-[#030409] shadow-[0_0_20px_rgba(212,255,0,0.2)]">
           M
         </div>
         <div>
@@ -71,14 +76,14 @@ export default function SideNav() {
       <div className="px-8 py-8 border-t border-white/[0.05]">
         <div className="flex items-center gap-4">
           <div className="relative">
-             <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center font-black text-sm text-[#d4ff00]">
-               OP
+             <div className="w-10 h-10 rounded-full bg-[#d4ff00]/10 border border-[#d4ff00]/20 flex items-center justify-center font-black text-sm text-[#d4ff00]">
+               U
              </div>
-             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#d4ff00] border-2 border-[#0a0e27]" />
+             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#030409]" />
           </div>
           <div>
-            <div className="text-[13px] font-black text-white tracking-tight">Active</div>
-            <div className="text-[10px] font-black text-[#d4ff00]/60 uppercase tracking-widest mt-0.5">Aussie_Active</div>
+            <div className="text-[13px] font-bold text-white tracking-tight">My Profile</div>
+            <div className="text-[10px] font-medium text-[#8a8a8a] mt-0.5">Manage Settings</div>
           </div>
         </div>
       </div>

@@ -20,11 +20,11 @@ app = FastAPI(
     description="Private nutrition tracking API — Supabase backend",
 )
 
-# CORS must be the absolute first middleware added to prevent preflight errors on 404/500s
+# CORS configuration for stable local development and PWA access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
