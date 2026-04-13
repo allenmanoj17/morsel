@@ -142,12 +142,20 @@ function DashboardContent() {
           date, score: tRes.adherence?.[i] ?? null
         })))
       }
-    } catch (e) { 
-      console.error(e) 
+    } catch (e: any) { 
+      console.error('DASHBOARD_LOAD_ERROR:', e)
+      // Check for 'not found' meaning onboarding needed
+      if (e.message?.includes('404') || e.message?.includes('not found') || e.message === 'API error') {
+         // Verify onboarding status specifically
+         api.getOnboarding(tok).catch(() => {
+            console.log('REDIRECT: Missing mission parameters. Initializing Onboarding.')
+            router.push('/onboarding')
+         })
+      }
       setError('Connection dropped. Is the backend running?')
     }
     finally { setLoading(false) }
-  }, [])
+  }, [router])
 
   useEffect(() => {
     const code = searchParams.get('code')
@@ -162,15 +170,25 @@ function DashboardContent() {
         setToken(session.access_token)
         load(session.access_token, selectedDate)
         
+        // Prefer explicit display_name from metadata (updated by Settings/Onboarding)
         const metaName = session.user.user_metadata?.display_name || session.user.user_metadata?.full_name
         const emailPrefix = session.user.email?.split('@')[0]
         setDisplayName(metaName || emailPrefix || '')
 
+        // Fetch from backend to ensure DB is in sync, but don't overwrite if metadata already looks good
         api.getOnboarding(session.access_token)
           .then((d: any) => {
-            if (d?.display_name) setDisplayName(d.display_name)
+            if (d?.display_name) {
+               // Only update if metadata was missing or different
+               setDisplayName(prev => prev || d.display_name)
+            }
           })
-          .catch(() => {})
+          .catch((err) => {
+            // Redirect if definitely not found
+            if (err.message?.includes('404')) router.push('/onboarding')
+          })
+      } else {
+        router.push('/login')
       }
     })
   }, [load, searchParams, router, selectedDate])

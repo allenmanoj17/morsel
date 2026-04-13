@@ -1,26 +1,33 @@
 import json
 import logging
 import anthropic
+import re
 from app.config import get_settings
 
 settings = get_settings()
-# We use Claude-3-Sonnet for reviews as it requires reasoning over the day's events
-MODEL = "claude-3-5-sonnet-20241022" 
+# Upgraded to Claude 4.5 Sonnet identifier (corrected)
+MODEL = "claude-sonnet-4-5" 
 
 client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 async def review_day_with_sonnet(day_str: str, entries_data: list, totals: dict, targets: dict, flags: list) -> dict:
     """
-    Passes the day's data and validation flags to Claude Sonnet to generate an insightful End-of-Day review.
+    Passes the day's data and validation flags to Claude Sonnet 4.5 to generate an analytical End-of-Day review.
     """
     sys_prompt = (
-        "You are an expert, empathetic nutrition coach reviewing a user's logged meals for the day. "
-        "You receive structured JSON of their logs, their daily macro totals, their targets, and any anomaly flags.\n"
-        "1. Write a short, encouraging summary of how they did (~2 sentences). Highlight a win based on the data.\n"
-        "2. If there are anomalies or flags (like severe_target_deviation), gently point it out and suggest how to adjust tomorrow.\n"
-        "3. Output ONLY strict, valid JSON matching this exact structure: \n"
-        "   { \"day_complete\": true/false, \"targets_met\": { \"calories\": true/false, \"protein\": true/false }, \"anomalies\": [\"anomaly string\"], \"summary\": \"your coach response\" }\n"
-        "Do not include any explanation outside the JSON block."
+        "You are an expert, empathetic Senior Nutrition Coach reviewing a user's food diary.\n"
+        "RECEIVE: Structured meal data, daily totals, targets, and anomaly flags.\n"
+        "TASKS:\n"
+        "1. Write an authoritative, encouraging summary (2 sentences). Highlight a data-driven win.\n"
+        "2. If flags (like target_deviation) exist, provide a clinical but gentle adjustment strategy for tomorrow.\n"
+        "3. Output ONLY strict, valid JSON. No markdown, no preamble.\n\n"
+        "JSON STRUCTURE:\n"
+        "{\n"
+        "  \"day_complete\": true,\n"
+        "  \"targets_met\": { \"calories\": true, \"protein\": true },\n"
+        "  \"anomalies\": [\"string\"],\n"
+        "  \"summary\": \"The coach analysis text\"\n"
+        "}"
     )
     
     user_content = json.dumps({
@@ -34,16 +41,15 @@ async def review_day_with_sonnet(day_str: str, entries_data: list, totals: dict,
     try:
         response = await client.messages.create(
             model=MODEL,
-            max_tokens=600,
+            max_tokens=800,
             system=sys_prompt,
             messages=[{"role": "user", "content": user_content}],
-            temperature=0.2
+            temperature=0.3
         )
         
         raw = response.content[0].text.strip()
         
         # Robust JSON extraction
-        import re
         match = re.search(r'\{.*\}', raw, re.DOTALL)
         if match:
             raw = match.group(0)
@@ -51,12 +57,11 @@ async def review_day_with_sonnet(day_str: str, entries_data: list, totals: dict,
         return json.loads(raw)
         
     except Exception as e:
-        logging.error(f"Sonnet review failed: {e}")
-        logging.error(f"Raw response: {raw if 'raw' in locals() else 'N/A'}")
+        logging.error(f"Sonnet 4.5 Review Error: {e}")
         # Return graceful fallback
         return {
             "day_complete": len(entries_data) > 0,
             "targets_met": {"calories": False, "protein": False},
-            "anomalies": ["Failed to parse deep review."],
-            "summary": "We couldn't reach your AI coach right now, but your logs for today are safely saved!"
+            "anomalies": ["AI_COACH_OFFLINE"],
+            "summary": "Your logs for today are safely saved! The AI Coach is currently recalibrating its bio-metric blueprint."
         }

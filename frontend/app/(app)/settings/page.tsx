@@ -94,9 +94,20 @@ export default function SettingsPage() {
   }
 
   const handleSaveName = async () => {
+    if (!displayName) return
     setSavingName(true)
-    try { await api.updateOnboarding({ display_name: displayName }, token) }
-    catch {} finally { setSavingName(false) }
+    try { 
+       const supabase = createClient()
+       // 1. Update Backend Database
+       await api.updateOnboarding({ display_name: displayName }, token) 
+       // 2. Sync with Supabase Auth Metadata (prevents the jump/flicker)
+       await supabase.auth.updateUser({
+         data: { display_name: displayName }
+       })
+       setSuccess(true); setTimeout(() => setSuccess(false), 2500)
+    }
+    catch (e) { console.error('NAME_UPDATE_ERROR:', e) } 
+    finally { setSavingName(false) }
   }
 
   const handleSignOut = async () => {

@@ -1,14 +1,28 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
-import { ChevronRight, ChevronLeft, Loader2, Sparkles, User, Target, Zap, Activity, Info, Dumbbell } from 'lucide-react'
+import { 
+  ChevronRight, 
+  ChevronLeft, 
+  Zap, 
+  TrendingUp, 
+  Activity, 
+  Dumbbell, 
+  Sparkles,
+  Loader2
+} from 'lucide-react'
 
-// Steps: 0: Welcome, 1: Identity, 2: Mission, 3: Metrics, 4: Strategy, 5: Ignite
-const STEPS = ['welcome', 'identity', 'mission', 'metrics', 'strategy', 'ignite'] as const
-type Step = typeof STEPS[number]
+const STEPS = [
+  { id: 'welcome', title: 'Welcome' },
+  { id: 'identity', title: 'Identity' },
+  { id: 'metrics', title: 'Metrics' },
+  { id: 'goal', title: 'Mission' },
+  { id: 'strategy', title: 'Strategy' },
+  { id: 'ignition', title: 'Ignition' }
+]
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -18,35 +32,35 @@ export default function OnboardingPage() {
 
   const [form, setForm] = useState({
     display_name: '',
-    calories_target: '',
-    protein_target_g: '',
-    carbs_target_g: '',
-    fat_target_g: '',
-    // Biometrics
     weight: '',
     height: '',
     age: '',
     gender: 'male',
     activity: '1.2',
-    goal: 'maintain' // lose, maintain, gain
+    goal: 'burn',
+    calories_target: '',
+    protein_target_g: '',
+    carbs_target_g: '',
+    fat_target_g: ''
   })
 
-  // TDEE Logic (Mifflin-St Jeor)
   const strategy = useMemo(() => {
     const w = parseFloat(form.weight)
     const h = parseFloat(form.height)
     const a = parseFloat(form.age)
     if (!w || !h || !a) return null
 
+    // Mifflin-St Jeor
     let bmr = (10 * w) + (6.25 * h) - (5 * a)
     bmr = form.gender === 'male' ? bmr + 5 : bmr - 161
-    const tdee = bmr * parseFloat(form.activity)
     
+    const tdee = bmr * parseFloat(form.activity)
     let targetCals = tdee
-    if (form.goal === 'lose') targetCals -= 500
-    if (form.goal === 'gain') targetCals += 300
+    let protPerKg = 1.8
 
-    const protPerKg = form.goal === 'maintain' ? 1.6 : 2.0
+    if (form.goal === 'burn') { targetCals -= 500; protPerKg = 2.2 }
+    if (form.goal === 'build') { targetCals += 300; protPerKg = 2.0 }
+    
     const targetProt = w * protPerKg
 
     return {
@@ -80,6 +94,7 @@ export default function OnboardingPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
+      // 1. Update Backend Profile & Targets
       await api.completeOnboarding({
         display_name: form.display_name,
         calories_target: parseFloat(form.calories_target),
@@ -88,8 +103,14 @@ export default function OnboardingPage() {
         fat_target_g: parseFloat(form.fat_target_g),
       }, session.access_token)
 
+      // 2. Sync with Supabase Auth Metadata (prevents UI jump/flicker)
+      await supabase.auth.updateUser({
+        data: { display_name: form.display_name }
+      })
+
       router.push('/')
     } catch (e: any) {
+      console.error('FINISH_ERROR:', e)
       setError(e.message || 'Transmission failed')
     } finally {
       setLoading(false)
@@ -111,8 +132,8 @@ export default function OnboardingPage() {
       {/* HUD Tracker */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px' }}>
          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-           <div style={{ width: '32px', height: '32px', background: '#d4ff00', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0e27', fontWeight: 900 }}>M</div>
-           <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '-0.02em' }}>Initialize Morsel</span>
+            <div style={{ width: '32px', height: '32px', background: '#d4ff00', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0e27', fontWeight: 900 }}>M</div>
+            <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '-0.02em' }}>Initialize Morsel</span>
          </div>
          <div style={{ fontSize: '10px', fontWeight: 900, color: '#8a8a8a' }}>SYSTEM_SECURE_01</div>
       </div>
@@ -133,64 +154,70 @@ export default function OnboardingPage() {
 
         {/* Step 1: Identity */}
         {stepIdx === 1 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-513">
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
              <h1 style={S.h1}>Identity.<br />Who is this?</h1>
              <div style={{ marginBottom: '40px' }}>
                 <label style={S.label}>Assigned Name</label>
                 <input 
-                  style={S.input} 
-                  value={form.display_name} 
                   autoFocus
+                  style={S.input} 
+                  placeholder="e.g. Maverick" 
+                  value={form.display_name} 
                   onChange={e => setForm(f => ({ ...f, display_name: e.target.value }))}
-                  placeholder="e.g. Neo"
                 />
              </div>
-             <button onClick={next} disabled={!form.display_name} style={{ ...S.btnNext, opacity: form.display_name ? 1 : 0.4 }}>Confirm Identity <ChevronRight size={18} /></button>
+             <button onClick={next} disabled={!form.display_name} style={{ ...S.btnNext, opacity: form.display_name ? 1 : 0.4 }}>Next Phase <ChevronRight size={18} /></button>
           </div>
         )}
 
-        {/* Step 2: Mission */}
+        {/* Step 2: Goal */}
         {stepIdx === 2 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-513">
-             <h1 style={S.h1}>Mission.<br />The Objective.</h1>
-             <div style={{ display: 'grid', gap: '12px', marginBottom: '40px' }}>
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+             <h1 style={S.h1}>Mission.<br />Target Outcome?</h1>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
                 {[
-                  { id: 'lose', label: 'Burn', desc: 'Accelerated fat loss phase', icon: <Zap size={18} /> },
-                  { id: 'maintain', label: 'Balance', desc: 'Hold current bio-mass', icon: <Activity size={18} /> },
-                  { id: 'gain', label: 'Build', desc: 'Hypertrophic surplus', icon: <Dumbbell size={18} /> }
-                ].map(g => {
-                  const active = form.goal === g.id
-                  return (
-                    <button 
-                      key={g.id} onClick={() => setForm(f => ({ ...f, goal: g.id }))}
-                      style={{ ...S.card, textAlign: 'left', cursor: 'pointer', borderColor: active ? '#d4ff00' : 'rgba(255,255,255,0.05)', background: active ? 'rgba(212,255,0,0.03)' : S.card.background }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                         <div style={{ color: active ? '#d4ff00' : '#8a8a8a' }}>{g.icon}</div>
-                         <span style={{ fontSize: '15px', fontWeight: 800, color: active ? '#d4ff00' : 'white' }}>{g.label}</span>
-                      </div>
-                      <p style={{ fontSize: '12px', color: '#8a8a8a' }}>{g.desc}</p>
-                    </button>
-                  )
-                })}
+                  { id: 'burn', label: 'Burn', desc: 'Accelerated fat loss phase', icon: <Zap size={18} /> },
+                  { id: 'balance', label: 'Balance', desc: 'Hold current bio-mass', icon: <Activity size={18} /> },
+                  { id: 'build', label: 'Build', desc: 'Hypertrophic surplus', icon: <Dumbbell size={18} /> }
+                ].map(g => (
+                  <button key={g.id} onClick={() => setForm(f => ({ ...f, goal: g.id }))}
+                    style={{ ...S.card, textAlign: 'left', border: form.goal === g.id ? '2px solid #d4ff00' : '1px solid rgba(255,255,255,0.05)', background: form.goal === g.id ? 'rgba(212,255,0,0.05)' : 'rgba(255,255,255,0.02)', padding: '20px', transition: 'all 0.2s', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                       <div style={{ color: form.goal === g.id ? '#d4ff00' : '#8a8a8a' }}>{g.icon}</div>
+                       <div>
+                          <p style={{ fontSize: '15px', fontWeight: 800, color: form.goal === g.id ? '#d4ff00' : 'white' }}>{g.label}</p>
+                          <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>{g.desc}</p>
+                       </div>
+                    </div>
+                  </button>
+                ))}
              </div>
              <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={back} style={{ width: '64px', height: '64px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChevronLeft color="white" /></button>
-                <button onClick={next} style={S.btnNext}>Lock Mission <ChevronRight size={18} /></button>
+                <button onClick={next} style={S.btnNext}>Select Target <ChevronRight size={18} /></button>
              </div>
           </div>
         )}
 
         {/* Step 3: Metrics */}
         {stepIdx === 3 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-513">
-             <h1 style={S.h1}>Bio-Link.<br />Core Metrics.</h1>
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+             <h1 style={S.h1}>Bio-metrics.<br />The Data.</h1>
              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div><label style={S.label}>Weight (kg)</label><input type="number" style={S.input} value={form.weight} onChange={e => setForm(f => ({ ...f, weight: e.target.value }))} placeholder="80" /></div>
-                <div><label style={S.label}>Height (cm)</label><input type="number" style={S.input} value={form.height} onChange={e => setForm(f => ({ ...f, height: e.target.value }))} placeholder="180" /></div>
+                <div>
+                   <label style={S.label}>Weight (kg)</label>
+                   <input type="number" style={S.input} placeholder="70" value={form.weight} onChange={e => setForm(f => ({ ...f, weight: e.target.value }))} />
+                </div>
+                <div>
+                   <label style={S.label}>Height (cm)</label>
+                   <input type="number" style={S.input} placeholder="175" value={form.height} onChange={e => setForm(f => ({ ...f, height: e.target.value }))} />
+                </div>
              </div>
              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                <div><label style={S.label}>Age</label><input type="number" style={S.input} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} placeholder="25" /></div>
+                <div>
+                   <label style={S.label}>Age</label>
+                   <input type="number" style={S.input} placeholder="25" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
+                </div>
                 <div>
                    <label style={S.label}>Gender</label>
                    <select style={S.input as any} value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
@@ -233,9 +260,9 @@ export default function OnboardingPage() {
 
              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '40px' }}>
                 {[
-                  { label: 'PRO', val: strategy.protein, color: '#d4ff00' },
-                  { label: 'CHO', val: strategy.carbs, color: 'white' },
-                  { label: 'FAT', val: strategy.fat, color: 'white' }
+                  { label: 'Prot', val: strategy.protein, color: '#d4ff00' },
+                  { label: 'Carbs', val: strategy.carbs, color: '#ff2d55' },
+                  { label: 'Fat', val: strategy.fat, color: '#00d9ff' }
                 ].map(m => (
                   <div key={m.label} style={{ ...S.card, padding: '16px', textAlign: 'center', marginBottom: 0 }}>
                      <p style={{ ...S.label, marginBottom: '4px' }}>{m.label}</p>
