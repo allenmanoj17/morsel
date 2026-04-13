@@ -23,7 +23,12 @@ def get_onboarding(
         .execute()
     )
     if not resp.data:
-        raise HTTPException(status_code=404, detail="Profile not found — complete onboarding first")
+        # Return a "Not yet onboarded" state instead of a 404
+        return OnboardingResponse(
+            user_id=user_id,
+            display_name="New User",
+            onboarding_completed=False
+        )
     return resp.data[0]
 
 

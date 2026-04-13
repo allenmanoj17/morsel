@@ -49,36 +49,53 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
     """
     client = get_client()
 
-    message = await client.messages.create(
-        model="claude-3-5-haiku-20241022",
-        max_tokens=1024,
-        system=HAIKU_SYSTEM_PROMPT,
-        messages=[
-            {"role": "user", "content": f"Parse this meal: {meal_text}"}
-        ],
-    )
-
-    raw_text = message.content[0].text.strip()
-
-    # Validate JSON
+    print(f"DEBUG: Processing AI parse request for: '{meal_text}'")
     try:
-        parsed = json.loads(raw_text)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Haiku returned invalid JSON: {str(e)}\nRaw: {raw_text[:200]}")
+        message = await client.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=1024,
+            system=HAIKU_SYSTEM_PROMPT,
+            messages=[
+                {"role": "user", "content": f"Parse this meal: {meal_text}"}
+            ],
+        )
 
-    # Validate required fields
-    required = ["meal_name", "items", "total_calories", "total_protein_g", "total_carbs_g", "total_fat_g"]
-    for field in required:
-        if field not in parsed:
-            raise ValueError(f"Haiku response missing required field: {field}")
+        raw_text = message.content[0].text.strip()
+        print(f"DEBUG: AI Response received (length {len(raw_text)})")
 
-    return {
-        "parsed": parsed,
-        "raw_response": raw_text,
-        "input_tokens": message.usage.input_tokens,
-        "output_tokens": message.usage.output_tokens,
-        "model": "claude-3-5-haiku-20241022",
-    }
+        # Validate JSON
+        try:
+            parsed = json.loads(raw_text)
+        except json.JSONDecodeError as e:
+            print(f"ERROR: AI returned invalid JSON. Raw text: {raw_text[:500]}")
+            raise ValueError(f"Haiku returned invalid JSON: {str(e)}")
+
+        return {
+            "parsed": parsed,
+            "raw_response": raw_text,
+            "input_tokens": message.usage.input_tokens,
+            "output_tokens": message.usage.output_tokens,
+            "model": "claude-3-5-haiku-20241022",
+        }
+    except Exception as e:
+        print(f"CRITICAL ERROR in AI Parse: {str(e)}")
+        # Provide a safe fallback response so the frontend doesn't crash
+        return {
+            "parsed": {
+                "meal_name": meal_text,
+                "items": [],
+                "total_calories": 0,
+                "total_protein_g": 0,
+                "total_carbs_g": 0,
+                "total_fat_g": 0,
+                "overall_confidence": 0
+            },
+            "raw_response": "error_fallback",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "model": "error",
+            "error": str(e)
+        }
 
 
 SONNET_SYSTEM_PROMPT = """You are a helpful nutrition advisor reviewing a user's food diary.

@@ -25,9 +25,9 @@ class OnboardingCreate(BaseModel):
 
 
 class OnboardingResponse(BaseModel):
-    user_id: UUID
-    display_name: str
-    onboarding_completed: bool
+    user_id: Optional[UUID] = None
+    display_name: Optional[str] = "New User"
+    onboarding_completed: bool = False
 
     class Config:
         from_attributes = True
