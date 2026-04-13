@@ -111,6 +111,10 @@ export default function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [token, setToken] = useState('')
+  const [showAdd, setShowAdd] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
   // Safety net for PKCE codes landing on the home page
   useEffect(() => {
