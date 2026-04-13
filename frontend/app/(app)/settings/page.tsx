@@ -166,7 +166,7 @@ export default function SettingsPage() {
           </div>
           <button id="save-settings-btn" onClick={handleSave} disabled={saving}
             style={{
-              width: '100%', padding: '18px', borderRadius: '16px', border: 'none', cursor: 'pointer',
+              width: '100%', padding: '18px', borderRadius: '16px', cursor: 'pointer',
               background: success ? '#d4ff00' : 'rgba(212,255,0,0.15)', color: success ? '#030409' : '#d4ff00',
               fontWeight: 900, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.12em',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',

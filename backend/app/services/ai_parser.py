@@ -1,3 +1,11 @@
+"""
+AI Parsing Engine (Anthropic Claude)
+=====================================
+This module manages the extraction of precise nutritional macros from raw, natural-language meal inputs.
+It utilizes the 'Claude 3.5 Haiku' model for high-low-latency, confident extractions.
+Key standards enforced via the system prompt include Australian metric portions and regional food archetypes.
+"""
+
 import json
 import re
 from typing import Optional
@@ -65,7 +73,7 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
     print(f"DEBUG: Processing AU AI parse request (Claude 4.5) for: '{meal_text}'")
     try:
         message = await client.messages.create(
-            model="claude-haiku-4-5",
+            model="claude-3-5-haiku-20241022",
             max_tokens=1024,
             system=HAIKU_SYSTEM_PROMPT,
             messages=[
@@ -95,7 +103,7 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
             "raw_response": raw_text,
             "input_tokens": message.usage.input_tokens,
             "output_tokens": message.usage.output_tokens,
-            "model": "claude-haiku-4-5",
+            "model": "claude-3-5-haiku-20241022",
         }
     except Exception as e:
         print(f"CRITICAL ERROR in AI Parse: {str(e)}")
@@ -118,44 +126,4 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
         }
 
 
-async def review_day_with_sonnet(
-    date: str,
-    entries: list,
-    totals: dict,
-    targets: dict,
-    validation_flags: list,
-) -> dict:
-    """
-    Call Claude Sonnet for end-of-day review (AU English).
-    """
-    client = get_client()
 
-    context = json.dumps({
-        "date": date,
-        "meal_entries": entries,
-        "daily_totals": totals,
-        "user_targets": targets,
-        "validation_flags": validation_flags,
-    }, indent=2)
-
-    message = await client.messages.create(
-        model="claude-sonnet-4-5",
-        max_tokens=1024,
-        system="You are an expert Australian Nutrition Coach. Use Australian English and encouraging vibes. Return ONLY valid JSON.",
-        messages=[
-            {"role": "user", "content": f"Review this day's payload:\n{context}"}
-        ],
-    )
-
-    raw_text = message.content[0].text.strip()
-    try:
-        # Robust extract
-        json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
-        if json_match:
-            parsed = json.loads(json_match.group())
-        else:
-            parsed = json.loads(raw_text)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Sonnet 4.5 returned invalid JSON: {str(e)}")
-
-    return parsed

@@ -1,3 +1,11 @@
+/**
+ * QuickAddModal Component
+ * =======================
+ * This is the core data-entry gateway for the application.
+ * It provides a fluid, mobile-first sheet interface for users to type natural language meals.
+ * It manages the asynchronous communication with the AI parsing backend and 
+ * handles state parsing for immediate review/editing before database finalization.
+ */
 'use client'
 
 import { useState, useRef, useEffect } from 'react'

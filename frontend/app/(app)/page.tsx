@@ -1,3 +1,11 @@
+/**
+ * Dashboard & Analytics Hub (Main Page)
+ * =====================================
+ * This module aggregates data from multiple backend services (Meals, Targets, Water, Coaching)
+ * to render the real-time daily biological dashboard.
+ * It strictly drives read-only data visualization panels and houses the FAB (Floating Action Button) 
+ * for invoking the QuickAdd data entry pipeline.
+ */
 'use client'
 
 import { useEffect, useState, useCallback, Suspense } from 'react'

@@ -6,7 +6,7 @@ from app.supabase_client import get_supabase
 from app.dependencies import get_current_user_id
 from app.schemas import ReviewResponse
 from app.services.validation import run_validation
-from app.services.ai_review import review_day_with_sonnet
+from app.services.ai_review import review_day_with_haiku
 
 router = APIRouter(prefix="/api/review", tags=["review"])
 
@@ -55,7 +55,7 @@ async def generate_eod_review(
     }
 
     # 2. Call Sonnet
-    review = await review_day_with_sonnet(date, entries, totals, targets_dict, flags)
+    review = await review_day_with_haiku(date, entries, totals, targets_dict, flags)
 
     # 3. Save validation flags back to rollup (optional audit trail)
     if r_resp.data:

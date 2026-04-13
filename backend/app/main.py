@@ -1,3 +1,16 @@
+"""
+Morsel Entry Point (FastAPI Runtime)
+====================================
+This module aggregates the API routers and configures the core FastAPI ASGI application.
+It defines CORS middleware for the Next.js PWA and explicitly mounts routes for:
+- Core Meal/Target CRUD
+- Onboarding & Dashboard Rollups
+- AI Coaching engines & parsing logic
+
+Usage:
+  uvicorn app.main:app --reload --port 8000
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings

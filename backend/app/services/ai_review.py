@@ -1,3 +1,12 @@
+"""
+AI Coach Engine (End of Day Review)
+===================================
+This module powers the automated behavioral coaching feature.
+It takes aggregated end-of-day data (macros, logs, targets) and pushes it through 'Claude 3.5 Haiku'
+to generate an empathetic, actionable, and strictly-structured JSON summary.
+This allows the dashboard to render personalized coaching insights instantly.
+"""
+
 import json
 import logging
 import anthropic
@@ -7,8 +16,8 @@ from app.config import get_settings
 from functools import lru_cache
 from app.config import get_settings
 
-# Correcting to standard Claude 3.5 Sonnet identifier
-MODEL = "claude-3-5-sonnet-20241022" 
+# Using Claude 3.5 Haiku globally for rapid, high-intelligence analytics
+MODEL = "claude-3-5-haiku-20241022" 
 
 @lru_cache()
 def get_anthropic_client():
@@ -19,23 +28,23 @@ def get_anthropic_client():
     settings = get_settings()
     return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-async def review_day_with_sonnet(day_str: str, entries_data: list, totals: dict, targets: dict, flags: list) -> dict:
+async def review_day_with_haiku(day_str: str, entries_data: list, totals: dict, targets: dict, flags: list) -> dict:
     """
-    Passes the day's data and validation flags to Claude Sonnet 4.5 to generate an analytical End-of-Day review.
+    Passes the day's data and validation flags to Claude 3.5 Haiku to generate a premium, high-impact End-of-Day review.
     """
     sys_prompt = (
-        "You are an expert, empathetic Senior Nutrition Coach reviewing a user's food diary.\n"
+        "You are an elite, highly empathetic Sports Nutritionist and Behavioral Coach reviewing a client's daily food journal.\n"
         "RECEIVE: Structured meal data, daily totals, targets, and anomaly flags.\n"
         "TASKS:\n"
-        "1. Write an authoritative, encouraging summary (2 sentences). Highlight a data-driven win.\n"
-        "2. If flags (like target_deviation) exist, provide a clinical but gentle adjustment strategy for tomorrow.\n"
+        "1. Write an engaging, highly motivating summary (2-3 sentences) directly addressing the user. Celebrate specific wins (e.g., hitting protein goals, great hydration).\n"
+        "2. Review any anomalies or missed targets. Provide ONE highly actionable, realistic micro-adjustment they can make tomorrow to improve without feeling guilty. Focus on positive behavioral momentum.\n"
         "3. Output ONLY strict, valid JSON. No markdown, no preamble.\n\n"
         "JSON STRUCTURE:\n"
         "{\n"
         "  \"day_complete\": true,\n"
         "  \"targets_met\": { \"calories\": true, \"protein\": true },\n"
         "  \"anomalies\": [\"string\"],\n"
-        "  \"summary\": \"The coach analysis text\"\n"
+        "  \"summary\": \"Your personalized, highly empathetic coach analysis text goes here.\"\n"
         "}"
     )
     
