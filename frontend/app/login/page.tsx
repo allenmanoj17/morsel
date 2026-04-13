@@ -13,6 +13,18 @@ export default function LoginPage() {
 
   const supabase = createClient()
 
+  // Catch errors from the URL (e.g. expired magic links)
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash && hash.includes('error=')) {
+      const params = new URLSearchParams(hash.replace('#', '?'))
+      const errorMsg = params.get('error_description') || 'Authentication failed'
+      setMessage({ type: 'error', text: errorMsg.replace(/\+/g, ' ') })
+      // Clear the hash so the error doesn't persist on refresh
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
