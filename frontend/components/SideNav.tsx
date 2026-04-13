@@ -7,8 +7,8 @@ import { LayoutDashboard, ScrollText, BookOpen, BarChart2, Settings } from 'luci
 const NAV_ITEMS = [
   { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/log', icon: ScrollText, label: 'Feed' },
-  { href: '/templates', icon: BookOpen, label: 'Protocols' },
-  { href: '/analytics', icon: BarChart2, label: 'Intelligence' },
+  { href: '/templates', icon: BookOpen, label: 'Templates' },
+  { href: '/analytics', icon: BarChart2, label: 'Analytics' },
   { href: '/settings', icon: Settings, label: 'Profile' },
 ]
 
@@ -27,7 +27,7 @@ export default function SideNav() {
         </div>
         <div>
           <div className="font-black text-2xl tracking-tighter text-white" style={{ lineHeight: 1 }}>Morsel</div>
-          <div className="text-[10px] uppercase tracking-[0.2em] font-black text-[#8a8a8a] mt-1">Private_Core</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] font-black text-[#8a8a8a] mt-1">Morsel_App</div>
         </div>
       </div>
 
@@ -77,8 +77,8 @@ export default function SideNav() {
              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#d4ff00] border-2 border-[#0a0e27]" />
           </div>
           <div>
-            <div className="text-[13px] font-black text-white tracking-tight">Operator</div>
-            <div className="text-[10px] font-black text-[#d4ff00]/60 uppercase tracking-widest mt-0.5">Linked_Live</div>
+            <div className="text-[13px] font-black text-white tracking-tight">Active</div>
+            <div className="text-[10px] font-black text-[#d4ff00]/60 uppercase tracking-widest mt-0.5">Aussie_Active</div>
           </div>
         </div>
       </div>

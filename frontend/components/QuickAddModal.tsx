@@ -105,6 +105,7 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
     sheet: { width: '100%', maxWidth: '440px', background: '#12183d', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.08)', padding: '32px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '8px', display: 'block' } as React.CSSProperties,
     input: { width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '18px', fontSize: '16px', fontWeight: 700, color: 'white', outline: 'none' } as React.CSSProperties,
+    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
     btnMain: { width: '100%', background: '#d4ff00', color: '#0a0e27', borderRadius: '16px', padding: '18px', fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' } as React.CSSProperties,
   }
 

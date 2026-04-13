@@ -7,9 +7,9 @@ import { LayoutDashboard, ScrollText, BookOpen, BarChart2, Settings } from 'luci
 const NAV_ITEMS = [
   { href: '/', icon: LayoutDashboard, label: 'Today' },
   { href: '/log', icon: ScrollText, label: 'Feed' },
-  { href: '/templates', icon: BookOpen, label: 'Protocols' },
-  { href: '/analytics', icon: BarChart2, label: 'Intel' },
-  { href: '/settings', icon: Settings, label: 'Bio' },
+  { href: '/templates', icon: BookOpen, label: 'Templates' },
+  { href: '/analytics', icon: BarChart2, label: 'Trends' },
+  { href: '/settings', icon: Settings, label: 'Me' },
 ]
 
 export default function BottomNav() {

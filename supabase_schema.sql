@@ -113,7 +113,7 @@ create table if not exists public.daily_rollups (
 );
 
 -- ─── weight_logs ─────────────────────────────────────────────────────────────
-create table if not exists public.weights (
+create table if not exists public.weight_logs (
   id            uuid primary key default uuid_generate_v4(),
   user_id       uuid not null references auth.users(id) on delete cascade,
   date          date not null,
@@ -185,9 +185,9 @@ create trigger trg_daily_rollups_updated_at
   before update on public.daily_rollups
   for each row execute function public.update_updated_at_column();
 
-drop trigger if exists trg_weights_updated_at on public.weights;
-create trigger trg_weights_updated_at
-  before update on public.weights
+drop trigger if exists trg_weight_logs_updated_at on public.weight_logs;
+create trigger trg_weight_logs_updated_at
+  before update on public.weight_logs
   for each row execute function public.update_updated_at_column();
 
 -- ═══════════════════════════════════════════════════════════════════
@@ -199,7 +199,7 @@ alter table public.food_items     enable row level security;
 alter table public.meal_templates enable row level security;
 alter table public.meal_entries   enable row level security;
 alter table public.daily_rollups  enable row level security;
-alter table public.weights        enable row level security;
+alter table public.weight_logs   enable row level security;
 alter table public.parse_audit    enable row level security;
 
 -- Users see only their own data (Using 'if not exists' style via drop if you need to rerun)
@@ -221,8 +221,29 @@ create policy "own meals"          on public.meal_entries   for all using (auth.
 drop policy if exists "own rollups" on public.daily_rollups;
 create policy "own rollups"        on public.daily_rollups  for all using (auth.uid() = user_id);
 
-drop policy if exists "own weights" on public.weights;
-create policy "own weights"        on public.weights        for all using (auth.uid() = user_id);
+drop policy if exists "own weight logs" on public.weight_logs;
+create policy "own weight logs"     on public.weight_logs    for all using (auth.uid() = user_id);
 
 drop policy if exists "own parse audits" on public.parse_audit;
 create policy "own parse audits"   on public.parse_audit    for all using (auth.uid() = user_id);
+
+-- ─── water_logs ─────────────────────────────────────────────────────────────
+create table if not exists public.water_logs (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  date          date not null,
+  amount_ml     integer not null default 0,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now(),
+  unique(user_id, date)
+);
+
+drop trigger if exists trg_water_logs_updated_at on public.water_logs;
+create trigger trg_water_logs_updated_at
+  before update on public.water_logs
+  for each row execute function public.update_updated_at_column();
+
+alter table public.water_logs enable row level security;
+
+drop policy if exists "own water logs" on public.water_logs;
+create policy "own water logs" on public.water_logs for all using (auth.uid() = user_id);

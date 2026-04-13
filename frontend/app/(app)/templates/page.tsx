@@ -74,8 +74,8 @@ function TemplateModal({ tpl, token, onClose, onSaved }: {
         <div style={{ width: '40px', height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', margin: '0 auto 24px' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
           <div>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'white', letterSpacing: '-0.04em' }}>{tpl ? 'Edit Preset' : 'Initialize Preset'}</h2>
-            <p style={{ fontSize: '12px', color: '#8a8a8a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>Permanent fuel profiles</p>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'white', letterSpacing: '-0.04em' }}>{tpl ? 'Edit Template' : 'Create Template'}</h2>
+            <p style={{ fontSize: '12px', color: '#8a8a8a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>Save your favorite meals</p>
           </div>
           <button onClick={onClose} style={{ width: '44px', height: '44px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={20} color="#8a8a8a" />
@@ -83,7 +83,7 @@ function TemplateModal({ tpl, token, onClose, onSaved }: {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-          <Field id="tpl-name" label="Preset ID" value={vals.template_name} onChange={v => setVals(x => ({ ...x, template_name: v }))} />
+          <Field id="tpl-name" label="Meal Name" value={vals.template_name} onChange={v => setVals(x => ({ ...x, template_name: v }))} />
           <Field id="tpl-desc" label="Description" value={vals.description} onChange={v => setVals(x => ({ ...x, description: v }))} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Field id="tpl-cal" label="Energy" value={vals.total_calories || ''} onChange={v => setVals(x => ({ ...x, total_calories: parseFloat(v) || 0 }))} type="number" suffix="kcal" />
@@ -103,7 +103,7 @@ function TemplateModal({ tpl, token, onClose, onSaved }: {
             boxShadow: '0 12px 32px rgba(212,255,0,0.3)', transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)'
           }}
         >
-          {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={20} /> Deploy Preset</>}
+          {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={20} /> Save Template</>}
         </button>
       </div>
     </div>
@@ -163,8 +163,8 @@ export default function TemplatesPage() {
     <div style={S.container}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
         <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em' }}>Presets</h1>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>{templates.length} initialized fuel profiles ✨</p>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em' }}>Templates</h1>
+          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>{templates.length} saved meal profiles ✨</p>
         </div>
       </div>
 
@@ -175,8 +175,8 @@ export default function TemplatesPage() {
       ) : templates.length === 0 ? (
         <div style={{ ...S.card, textAlign: 'center', padding: '80px 24px' }}>
           <p style={{ fontSize: '48px', marginBottom: '16px' }}>📋</p>
-          <p style={{ fontSize: '16px', fontWeight: 800 }}>No Presets Active</p>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Define protocols to optimize your fuel intake.</p>
+          <p style={{ fontSize: '16px', fontWeight: 800 }}>No templates yet</p>
+          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Create templates to log your meals faster.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -231,7 +231,7 @@ export default function TemplatesPage() {
                 }}
               >
                 <Play size={16} fill="currentColor" strokeWidth={0} />
-                Execute Preset Log
+                Log this meal
               </button>
             </div>
           ))}

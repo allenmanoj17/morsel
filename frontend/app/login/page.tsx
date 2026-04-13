@@ -92,7 +92,7 @@ export default function LoginPage() {
         <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#d4ff00] text-[#0a0e27] font-black text-xl shadow-[0_0_20px_rgba(212,255,0,0.2)]">M</div>
         <div className="flex flex-col">
           <span className="font-bold text-2xl tracking-tighter text-white">Morsel</span>
-          <span className="text-[10px] uppercase tracking-widest font-black text-[#8a8a8a] -mt-1">Private Tracker</span>
+          <span className="text-[10px] uppercase tracking-widest font-black text-[#8a8a8a] -mt-1">Morsel App</span>
         </div>
       </div>
 
@@ -102,7 +102,7 @@ export default function LoginPage() {
           {mode === 'signup' ? 'Create Account' : mode === 'magic' ? 'Magic Access' : 'Welcome Back'}
         </h1>
         <p className="text-[14px] font-medium text-[#8a8a8a] mb-8">
-          {mode === 'signup' ? 'Join the private tracking core ✨' : mode === 'magic' ? 'Passwordless entry protocol' : 'Sign in to your tracker ✨'}
+          {mode === 'signup' ? 'Start your tracking journey ✨' : mode === 'magic' ? 'Sign in with a secure link' : 'Welcome back to Morsel ✨'}
         </p>
 
         <form onSubmit={getSubmitHandler()} className="flex flex-col gap-4">
@@ -110,7 +110,7 @@ export default function LoginPage() {
             {(['signin', 'magic', 'signup'] as const).map((m) => (
               <button key={m} type="button" onClick={() => setMode(m)}
                 className={`flex-1 py-2.5 rounded-lg text-[11px] uppercase tracking-widest font-black transition-all cursor-pointer ${mode === m ? 'bg-[#d4ff00] text-[#0a0e27] shadow-sm' : 'text-[#8a8a8a]'}`}>
-                {m === 'signin' ? 'Login' : m === 'magic' ? 'Magic' : 'Join'}
+                {m === 'signin' ? 'Login' : m === 'magic' ? 'Magic' : 'Join Now'}
               </button>
             ))}
           </div>
@@ -160,7 +160,7 @@ export default function LoginPage() {
             className="w-full py-5 mt-2 rounded-[14px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all enabled:bg-[#d4ff00] enabled:text-[#0a0e27] disabled:bg-white/[0.05] disabled:text-[#8a8a8a] cursor-pointer shadow-[0_8px_24px_rgba(212,255,0,0.2)] active:scale-95">
             {loading ? <Loader2 size={14} className="animate-spin" /> : (
               <>
-                {mode === 'signin' ? 'Engage Protocol' : mode === 'magic' ? 'Send Link' : 'Initialize Account'}
+                {mode === 'signin' ? 'Log In' : mode === 'magic' ? 'Send Link' : 'Join Now'}
                 <ArrowRight size={18} />
               </>
             )}
@@ -181,7 +181,7 @@ export default function LoginPage() {
       </div>
 
       <p className="mt-8 text-[10px] font-black uppercase tracking-[0.2em] text-[#8a8a8a]">
-        Private tracker — active access only
+        Morsel — Simpler, Smarter Tracking
       </p>
       </div>
     </div>
