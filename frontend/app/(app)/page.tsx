@@ -105,12 +105,20 @@ function StreakBars({ days }: { days: { date: string; score: number | null }[] }
   )
 }
 
+import { useRouter, useSearchParams } from 'next/navigation'
+
 export default function DashboardPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [token, setToken] = useState('')
-  const [showAdd, setShowAdd] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  
+  // Safety net for PKCE codes landing on the home page
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (code) {
+      router.replace(`/auth/callback?code=${code}`)
+    }
+  }, [searchParams, router])
   
   const today = new Date().toISOString().split('T')[0]
   const [selectedDate, setSelectedDate] = useState(today)
