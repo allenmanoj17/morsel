@@ -37,12 +37,30 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [displayName, setDisplayName] = useState('')
+  const [goalWeight, setGoalWeight] = useState('')
+  const [actualWeight, setActualWeight] = useState<number | null>(null)
+  const [heightCm, setHeightCm] = useState('')
   const [savingName, setSavingName] = useState(false)
   const router = useRouter()
 
   const [form, setForm] = useState({
     calories_target: '', protein_target_g: '', carbs_target_g: '', fat_target_g: '', water_target_ml: '2500'
   })
+
+  // BMI Calculation: Use ACTUAL weight, not goal weight
+  const bmiValue = (actualWeight && heightCm) 
+    ? (actualWeight / Math.pow(parseFloat(heightCm) / 100, 2)).toFixed(1) 
+    : '--'
+  
+  const getBMICategory = (val: string) => {
+    const b = parseFloat(val)
+    if (isNaN(b)) return { label: 'Incomplete Data', color: '#5a5a5a' }
+    if (b < 18.5) return { label: 'Underweight', color: '#00d9ff' }
+    if (b < 25) return { label: 'Healthy Range', color: '#d4ff00' }
+    if (b < 30) return { label: 'Overweight', color: '#ffa500' }
+    return { label: 'Obese', color: '#ff2d55' }
+  }
+  const bmiCat = getBMICategory(bmiValue)
 
   useEffect(() => {
     const supabase = createClient()
@@ -54,12 +72,22 @@ export default function SettingsPage() {
       setDisplayName(metaName || session.user.email?.split('@')[0] || '')
 
       try {
-        const [data, onb] = await Promise.all([
+        const [data, onb, weights] = await Promise.all([
           api.getTargets(session.access_token),
           api.getOnboarding(session.access_token).catch(() => null),
+          api.getWeights(session.access_token).catch(() => []),
         ])
         setTargets(data)
         if (onb?.display_name) setDisplayName(onb.display_name)
+        if (onb?.goal_weight) setGoalWeight(onb.goal_weight.toString())
+        if (onb?.height_cm) setHeightCm(onb.height_cm.toString())
+        
+        // Latest Weight
+        if (weights && weights.length > 0) {
+          const latest = weights.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+          setActualWeight(latest.weight_value)
+        }
+
         const def = data.find((t: Target) => t.target_type === 'default')
         if (def) setForm({
           calories_target: def.calories_target?.toString() || '',
@@ -98,11 +126,37 @@ export default function SettingsPage() {
     setSavingName(true)
     try { 
        const supabase = createClient()
-       await api.updateOnboarding({ display_name: displayName }, token) 
+       // 1. Update Core Profile Shard
+       await api.updateOnboarding({ 
+         display_name: displayName,
+         goal_weight: goalWeight ? parseFloat(goalWeight) : null,
+         height_cm: heightCm ? parseFloat(heightCm) : null
+       }, token) 
+
+       // 2. Log Weight to Engine if changed
+       if (actualWeight !== null) {
+         await api.createWeight({
+            date: getLocalDateString(),
+            weight_value: actualWeight,
+            unit: 'kg'
+         }, token)
+       }
+       
+       // 3. Sync Auth Metadata
        await supabase.auth.updateUser({ data: { display_name: displayName } })
+       
+       // 3. Force Re-fetch
+       const p = await api.getOnboarding(token)
+       setDisplayName(p.display_name)
+       setGoalWeight(p.goal_weight?.toString() || '')
+       setHeightCm(p.height_cm?.toString() || '')
+       
        setSuccess(true); setTimeout(() => setSuccess(false), 2500)
     }
-    catch {} finally { setSavingName(false) }
+    catch (e) {
+      console.error("SAVE_ERROR:", e)
+      alert("Verification failed. Please try again.")
+    } finally { setSavingName(false) }
   }
 
   const handleSignOut = async () => {
@@ -116,13 +170,14 @@ export default function SettingsPage() {
       width: '100%',
       maxWidth: '1200px', 
       margin: '0 auto', 
-      padding: '24px 20px 140px', 
+      padding: '24px 16px 140px', 
       minHeight: '100dvh', 
       background: '#030409', 
       color: 'white',
-      boxSizing: 'border-box'
+      display: 'flex',
+      flexDirection: 'column' as const
     } as React.CSSProperties,
-    card: { background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--card-radius)', padding: '24px', marginBottom: '16px', backdropFilter: 'blur(16px)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' } as React.CSSProperties,
+    card: { background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--card-radius)', padding: '24px', marginBottom: '16px', backdropFilter: 'blur(16px)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)', width: '100%', boxSizing: 'border-box' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px' } as React.CSSProperties
   }
 
@@ -134,31 +189,105 @@ export default function SettingsPage() {
         <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Customise your physiological targets ✨</p>
       </div>
 
-      {/* ── Name ── */}
-      <p style={S.label}>Display Name</p>
-      <div style={{ ...S.card, display: 'flex', gap: '12px', alignItems: 'center' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
-          <User size={16} color="#8a8a8a" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            id="display-name" type="text" value={displayName}
-            onChange={e => setDisplayName(e.target.value)}
-            onBlur={handleSaveName}
-            style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white' }}
-          />
+      {/* ── Biological Status ── */}
+      <p style={S.label}>Physiological Status</p>
+      <div style={{ ...S.card, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          <div style={{ position: 'relative' }}>
+            <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>DISPLAY NAME</label>
+            <User size={16} color="#8a8a8a" style={{ position: 'absolute', left: '16px', bottom: '16px' }} />
+            <input
+              id="display-name" type="text" value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              placeholder="Name"
+              style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ position: 'relative' }}>
+             <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>ACTUAL WEIGHT</label>
+             <Scale size={16} color="#00d9ff" style={{ position: 'absolute', left: '16px', bottom: '16px' }} />
+             <input
+               id="actual-weight" type="number" value={actualWeight || ''}
+               onChange={e => setActualWeight(parseFloat(e.target.value))}
+               placeholder="Current"
+               style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(0,217,255,0.2)', background: 'rgba(0,217,255,0.03)', color: 'white', boxSizing: 'border-box' }}
+             />
+             <span style={{ position: 'absolute', right: '16px', bottom: '16px', fontSize: '10px', fontWeight: 900, color: '#00d9ff' }}>KG</span>
+          </div>
+          <div style={{ position: 'relative' }}>
+             <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>HEIGHT</label>
+             <ChevronRight size={16} color="#8a8a8a" style={{ position: 'absolute', left: '16px', bottom: '16px', transform: 'rotate(90deg)' }} />
+             <input
+               id="height-cm" type="number" value={heightCm}
+               onChange={e => setHeightCm(e.target.value)}
+               placeholder="Height"
+               style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white', boxSizing: 'border-box' }}
+             />
+             <span style={{ position: 'absolute', right: '16px', bottom: '16px', fontSize: '10px', fontWeight: 900, color: '#5a5a5a' }}>CM</span>
+          </div>
+          <div style={{ background: 'rgba(212,255,0,0.02)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(212,255,0,0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <p style={{ fontSize: '9px', fontWeight: 900, color: '#5a5a5a', letterSpacing: '0.1em' }}>BIO-METRIC BMI</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: bmiCat.color }}>{bmiValue}</span>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: bmiCat.color, textTransform: 'uppercase' }}>{bmiCat.label}</span>
+            </div>
+          </div>
         </div>
+        
         <button onClick={handleSaveName} disabled={savingName}
-          style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(212,255,0,0.3)' }}>
-          {savingName ? <Loader2 size={16} className="animate-spin" /> : <Save size={20} />}
+          style={{ width: '100%', height: '52px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '13px', fontWeight: 900, textTransform: 'uppercase', boxShadow: '0 4px 15px rgba(212,255,0,0.3)', marginTop: '8px' }}>
+          {savingName ? <Loader2 size={16} className="animate-spin" /> : <><Save size={18} /> Update Bio-Status</>}
+        </button>
+      </div>
+
+      {/* ── Ambitious Goals ── */}
+      <p style={S.label}>Goal Calibration</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '8px' }}>
+           <div style={{ ...S.card, position: 'relative', margin: 0 }}>
+              <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>TARGET WEIGHT</label>
+              <TargetIcon size={16} color="#d4ff00" style={{ position: 'absolute', left: '16px', bottom: '16px' }} />
+              <input
+                id="goal-weight" type="number" value={goalWeight}
+                onChange={e => setGoalWeight(e.target.value)}
+                placeholder="Target"
+                style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(212,255,0,0.2)', background: 'rgba(212,255,0,0.03)', color: 'white', boxSizing: 'border-box' }}
+              />
+              <span style={{ position: 'absolute', right: '16px', bottom: '16px', fontSize: '10px', fontWeight: 900, color: '#d4ff00' }}>KG</span>
+           </div>
+           
+           <div style={{ ...S.card, display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(212,255,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Scale size={20} color="#d4ff00" />
+              </div>
+              <div>
+                <p style={{ fontSize: '14px', fontWeight: 900, color: 'white' }}>{goalWeight || '--'} kg</p>
+                <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 800 }}>Aspiration</p>
+              </div>
+           </div>
+      </div>
+
+      {/* ── Measurements ── */}
+      <p style={S.label}>Analytics Depth</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+        <button onClick={() => router.push('/weight')}
+          style={{ ...S.card, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(212,255,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Scale size={24} color="#d4ff00" />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '16px', fontWeight: 800 }}>Body Weight Engine</h4>
+            <p style={{ fontSize: '12px', color: '#8a8a8a', marginTop: '2px' }}>Manage daily weigh-ins and physiological trends</p>
+          </div>
         </button>
       </div>
 
       {/* ── Nutrition Goals ── */}
-      <p style={S.label}>Nutrition targets (Daily)</p>
+      <p style={{ ...S.label, marginTop: '32px' }}>Nutrition targets (Daily)</p>
       {loading ? (
         <div style={{ ...S.card, height: 200, opacity: 0.3 }} />
       ) : (
         <div style={S.card}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '24px' }}>
             <Field id="set-cal"   label="Calories" value={form.calories_target}  onChange={v => setForm(f => ({ ...f, calories_target: v }))}  suffix="kcal" />
             <Field id="set-prot"  label="Protein"  value={form.protein_target_g} onChange={v => setForm(f => ({ ...f, protein_target_g: v }))} suffix="g" />
             <Field id="set-carbs" label="Carbs"    value={form.carbs_target_g}   onChange={v => setForm(f => ({ ...f, carbs_target_g: v }))}   suffix="g" />
@@ -180,21 +309,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ── Body ── */}
-      <p style={S.label}>Measurements</p>
-      <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
-        <button onClick={() => router.push('/weight')}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Scale size={20} color="#d4ff00" />
-            <div style={{ textAlign: 'left' }}>
-              <p style={{ fontSize: '15px', fontWeight: 800 }}>Body Weight</p>
-              <p style={{ fontSize: '11px', color: '#8a8a8a' }}>Track your daily progress</p>
-            </div>
-          </div>
-          <ChevronRight size={20} color="#3a3a3a" />
-        </button>
-      </div>
+
 
       {/* ── Sign Out ── */}
       <div style={{ marginTop: '32px' }}>

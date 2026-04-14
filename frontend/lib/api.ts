@@ -1,17 +1,32 @@
+import { createClient } from './supabase/client'
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 async function apiFetch(path: string, options: RequestInit = {}, token?: string) {
+  let activeToken = token
+
+  // If no token provided or we suspect it's stale, try to resolve a fresh one
+  if (!activeToken) {
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      activeToken = session?.access_token
+    } catch (e) {
+      console.warn('API_TOKEN_RESOLUTION_FAILED:', e)
+    }
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+  if (activeToken) {
+    headers['Authorization'] = `Bearer ${activeToken}`
   }
 
   try {
     const controller = new AbortController()
-    const id = setTimeout(() => controller.abort(), 30000) // 30s timeout for LLM processing
+    const id = setTimeout(() => controller.abort(), 60000)
 
     const res = await fetch(`${API_URL}${path}`, { 
       ...options, 
@@ -23,7 +38,20 @@ async function apiFetch(path: string, options: RequestInit = {}, token?: string)
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }))
-      throw new Error(err.detail || `API error: ${res.status}`)
+      const msg = err.detail || `API error: ${res.status}`
+      
+      // If we get an explicit expired JWT error, we should probably force a session reset
+      if (res.status === 401 || msg.toLowerCase().includes('expired')) {
+        console.error('SESSION_EXPIRED_OR_INVALID_JWT:', msg)
+        // Clean up session if it's dead
+        if (typeof window !== 'undefined') {
+          const supabase = createClient()
+          await supabase.auth.signOut()
+          window.location.href = '/login?error=session_expired'
+        }
+      }
+      
+      throw new Error(msg)
     }
     if (res.status === 204) return null
     return res.json()
@@ -104,11 +132,21 @@ export const api = {
   getWeeklyAnalytics: (token: string) =>
     apiFetch('/api/analytics/weekly', {}, token),
 
-  getAnalyticsTrends: (days: number, token: string) =>
-    apiFetch(`/api/analytics/trends?days=${days}`, {}, token),
+  getAnalyticsTrends: (days: number, token: string, start?: string, end?: string) => {
+    let url = `/api/analytics/trends?days=${days}`
+    if (start) url += `&start_date=${start}`
+    if (end) url += `&end_date=${end}`
+    return apiFetch(url, {}, token)
+  },
+  getMealStats: (days: number, token: string, start?: string, end?: string) => {
+    let url = `/api/analytics/meal-stats?days=${days}`
+    if (start) url += `&start_date=${start}`
+    if (end) url += `&end_date=${end}`
+    return apiFetch(url, {}, token)
+  },
 
-  getMealStats: (days: number, token: string) =>
-    apiFetch(`/api/analytics/meal-stats?days=${days}`, {}, token),
+  getSocialSummary: (date: string, token: string) =>
+    apiFetch(`/api/analytics/social-summary/${date}`, {}, token),
 
   // Review
   generateEODReview: (date: string, token: string) =>

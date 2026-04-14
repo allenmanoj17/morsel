@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
 import { getLocalDateString } from '@/lib/utils'
-import { Plus, Loader2, Check, Zap, TrendingUp, ChevronRight, ChevronLeft, Droplets, Minus } from 'lucide-react'
+import { Plus, Loader2, Check, Zap, TrendingUp, ChevronRight, ChevronLeft, Droplets, Minus, Share2 } from 'lucide-react'
 import QuickAddModal from '@/components/QuickAddModal'
 
 // ── Helpers ──
@@ -208,6 +208,10 @@ function DashboardContent() {
             <span style={{ color: '#d4ff00' }}>{greeting}</span>{displayName ? `, ${displayName.split(' ')[0]}` : ''} ✨
           </h1>
         </div>
+        <button onClick={() => router.push('/analytics?share=true')} 
+          style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(212,255,0,0.1)', border: '1px solid rgba(212,255,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(212,255,0,0.1)' }}>
+          <Share2 size={20} color="#d4ff00" />
+        </button>
       </div>
 
       {loading ? (
@@ -274,9 +278,35 @@ function DashboardContent() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {recentMeals.map(m => (
-                  <div key={m.id} style={{ ...S.card, padding: '16px 20px', marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ flex: 1, overflow: 'hidden' }}><span style={{ fontSize: '15px', fontWeight: 700, display: 'block', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.meal_name}</span><p style={{ fontSize: '11px', color: '#8a8a8a' }}>{Math.round(m.calories)} kcal</p></div>
-                    <div style={{ textAlign: 'right' }}><span style={{ fontSize: '14px', fontWeight: 900, color: '#d4ff00' }}>{Math.round(m.protein_g)}g</span><p style={{ fontSize: '9px', color: '#8a8a8a' }}>PRO</p></div>
+                  <div key={m.id} style={{ ...S.card, padding: '16px 20px', marginBottom: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <span style={{ fontSize: '15px', fontWeight: 700, display: 'block', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.meal_name}</span>
+                        <p style={{ fontSize: '11px', color: '#8a8a8a' }}>{Math.round(m.calories)} kcal</p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 900, color: '#d4ff00' }}>{Math.round(m.protein_g)}g</span>
+                        <p style={{ fontSize: '9px', color: '#8a8a8a' }}>PRO</p>
+                      </div>
+                    </div>
+                    {m.items && m.items.length > 0 ? (
+                      <div style={{ marginTop: '12px' }}>
+                        <div style={{ height: '1px', background: 'linear-gradient(90deg, rgba(255,255,255,0.08) 0%, transparent 100%)', marginBottom: '10px' }} />
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {m.items.map((item: any, idx: number) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                               <span style={{ fontSize: '10px', fontWeight: 800, color: 'white' }}>{item.name}</span>
+                               <span style={{ fontSize: '9px', fontWeight: 600, color: '#5a5a5a' }}>{Math.round(item.calories)}<span style={{ fontSize: '7px' }}>kcal</span></span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : m.meal_name.toLowerCase().includes('composite') && m.entry_text_raw && (
+                      <div style={{ marginTop: '12px' }}>
+                        <div style={{ height: '1px', background: 'linear-gradient(90deg, rgba(255,255,255,0.08) 0%, transparent 100%)', marginBottom: '10px' }} />
+                        <p style={{ fontSize: '11px', color: '#5a5a5a', fontStyle: 'italic', fontWeight: 600 }}>{m.entry_text_raw}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

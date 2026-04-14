@@ -14,6 +14,7 @@ Usage:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
+from fastapi.responses import JSONResponse
 from app.routers import meals as meals_router
 from app.routers import targets as targets_router
 from app.routers import onboarding as onboarding_router
@@ -33,7 +34,7 @@ app = FastAPI(
     description="Private nutrition tracking API — Supabase backend",
 )
 
-# CORS configuration for secure serverless pairing
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -41,6 +42,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    import traceback
+    error_detail = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    print(f"FATAL_ERROR: {error_detail}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal Server Error: {str(exc)}", "trace": error_detail if settings.app_env == "development" else None},
+        headers={"Access-Control-Allow-Origin": "http://localhost:3000"} 
+    )
 
 app.include_router(meals_router.router)
 app.include_router(targets_router.router)

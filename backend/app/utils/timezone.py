@@ -1,21 +1,16 @@
 from datetime import datetime, date
-from functools import lru_cache
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    # Fallback for Python < 3.9
+    from backports.zoneinfo import ZoneInfo
 
-@lru_cache()
 def _get_tz():
-    try:
-        import pytz
-        return pytz.timezone("Australia/Sydney")
-    except (ImportError, Exception):
-        # Fallback to local/UTC if pytz isn't available or fails
-        return None
+    return ZoneInfo("Australia/Sydney")
 
 def get_sydney_now() -> datetime:
     """Returns the current aware datetime in Sydney."""
-    tz = _get_tz()
-    if tz is None:
-        return datetime.now() # System local
-    return datetime.now(tz)
+    return datetime.now(_get_tz())
 
 def get_sydney_today() -> date:
     """Returns the current date in Sydney."""

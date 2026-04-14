@@ -48,7 +48,7 @@ def get_daily_dashboard(
     # Active target
     t_resp = (
         supabase.table("daily_targets")
-        .select("calories_target,protein_target_g,carbs_target_g,fat_target_g")
+        .select("calories_target,protein_target_g,carbs_target_g,fat_target_g,water_target_ml")
         .eq("user_id", user_id)
         .eq("target_type", "default")
         .lte("effective_from", date)

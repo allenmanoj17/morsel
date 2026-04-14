@@ -201,8 +201,26 @@ export default function LogPage() {
                       <span style={{ width: '4px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.1)' }} />
                       <span style={{ fontSize: '10px', fontWeight: 800, color: '#8a8a8a' }}>{formatTime(entry.logged_at)}</span>
                    </div>
-                   <h3 style={{ fontSize: '18px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.meal_name}</h3>
-                </div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.meal_name}</h3>
+                    {entry.items && entry.items.length > 0 ? (
+                      <div style={{ marginTop: '12px' }}>
+                         <div style={{ height: '1px', background: 'linear-gradient(90deg, rgba(255,255,255,0.08) 0%, transparent 100%)', marginBottom: '10px' }} />
+                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                           {entry.items.map((item: any, idx: number) => (
+                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 800, color: 'white' }}>{item.name}</span>
+                                <span style={{ fontSize: '9px', fontWeight: 600, color: '#5a5a5a' }}>{Math.round(item.calories)}<span style={{ fontSize: '7px' }}>kcal</span></span>
+                             </div>
+                           ))}
+                         </div>
+                      </div>
+                    ) : entry.meal_name.toLowerCase().includes('composite') && entry.entry_text_raw && (
+                      <div style={{ marginTop: '12px' }}>
+                        <div style={{ height: '1px', background: 'linear-gradient(90deg, rgba(255,255,255,0.08) 0%, transparent 100%)', marginBottom: '10px' }} />
+                        <p style={{ fontSize: '11px', color: '#5a5a5a', fontStyle: 'italic', fontWeight: 600 }}>{entry.entry_text_raw}</p>
+                      </div>
+                    )}
+                 </div>
                 <div style={{ display: 'flex', gap: '4px' }}>
                    <button onClick={() => setEditEntry(entry)} style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Pencil size={14} color="white" />

@@ -19,15 +19,19 @@ export default function WeightPage() {
   const router = useRouter()
 
   const loadData = useCallback(async (tok: string) => {
-    try { const data = await api.getWeights(tok); setWeights(data) }
+    try { 
+      const [data, onb] = await Promise.all([
+        api.getWeights(tok),
+        api.getOnboarding(tok).catch(() => null)
+      ])
+      setWeights(data) 
+      if (onb?.height_cm) setHeight(onb.height_cm.toString())
+    }
     catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
-    const storedH = localStorage.getItem('morsel_height')
-    if (storedH) setHeight(storedH)
-
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) { setToken(session.access_token); loadData(session.access_token) }
@@ -56,14 +60,21 @@ export default function WeightPage() {
   const delta = (latest && previous) ? (latest - previous) : null
   
   const bmi = (latest && height) ? (latest / ((parseFloat(height)/100) ** 2)) : null
-  const bmiLabel = bmi === null ? null : bmi < 18.5 ? 'Light' : bmi < 25 ? 'Healthy' : bmi < 30 ? 'Over' : 'High'
-  const bmiColor = bmi === null ? '#8a8a8a' : bmi < 18.5 ? '#00d9ff' : bmi < 25 ? '#d4ff00' : '#ff2d55'
+  
+  const getBMICategory = (val: number | null) => {
+    if (val === null) return { label: null, color: '#8a8a8a' }
+    if (val < 18.5) return { label: 'Underweight', color: '#00d9ff' }
+    if (val < 25) return { label: 'Healthy Range', color: '#d4ff00' }
+    if (val < 30) return { label: 'Overweight', color: '#ffa500' }
+    return { label: 'Obese', color: '#ff2d55' }
+  }
+  const bmiCat = getBMICategory(bmi)
 
   const TOOLTIP_STYLE = { backgroundColor: '#030409', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 800, color: 'white' }
 
   const S = {
-    container: { maxWidth: '480px', margin: '0 auto', padding: '24px 20px 120px', minHeight: '100dvh', background: '#030409', color: 'white' } as React.CSSProperties,
-    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
+    container: { width: '100%', maxWidth: '480px', margin: '0 auto', padding: '24px 16px 120px', minHeight: '100dvh', background: '#030409', color: 'white', display: 'flex', flexDirection: 'column' as const, boxSizing: 'border-box' } as React.CSSProperties,
+    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px', width: '100%', boxSizing: 'border-box' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '10px' } as React.CSSProperties
   }
 
@@ -89,7 +100,7 @@ export default function WeightPage() {
         <>
           {/* ── Stats ── */}
           {weights.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' }}>
               <div style={S.card}>
                 <p style={S.label}>Current</p>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
@@ -109,15 +120,11 @@ export default function WeightPage() {
                 <p style={S.label}>BMI</p>
                 {bmi !== null ? (
                   <>
-                    <p style={{ fontSize: '32px', fontWeight: 900, color: bmiColor }}>{bmi.toFixed(1)}</p>
-                    <p style={{ fontSize: '11px', fontWeight: 800, color: bmiColor, marginTop: '2px' }}>{bmiLabel}</p>
+                    <p style={{ fontSize: '32px', fontWeight: 900, color: bmiCat.color }}>{bmi.toFixed(1)}</p>
+                    <p style={{ fontSize: '11px', fontWeight: 800, color: bmiCat.color, marginTop: '2px' }}>{bmiCat.label}</p>
                   </>
                 ) : (
-                  <input placeholder="H (cm)" type="number"
-                    value={height}
-                    onChange={e => { setHeight(e.target.value); localStorage.setItem('morsel_height', e.target.value) }}
-                    style={{ width: '100%', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px', fontSize: '12px', fontWeight: 800, color: 'white', background: 'rgba(255,255,255,0.03)', outline: 'none' }}
-                  />
+                  <p style={{ fontSize: '11px', color: '#5a5a5a', fontWeight: 800 }}>Complete profile to see BMI</p>
                 )}
               </div>
             </div>

@@ -11,6 +11,8 @@ create table if not exists public.profiles (
   id                    uuid primary key default uuid_generate_v4(),
   user_id               uuid unique not null references auth.users(id) on delete cascade,
   display_name          text not null,
+  goal_weight           numeric(6,2),
+  height_cm             numeric(5,2),
   onboarding_completed  boolean not null default false,
   created_at            timestamptz default now(),
   updated_at            timestamptz default now()

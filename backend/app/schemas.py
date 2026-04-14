@@ -17,6 +17,8 @@ class MacroBase(BaseModel):
 
 class OnboardingCreate(BaseModel):
     display_name: str
+    goal_weight: Optional[float] = None
+    height_cm: Optional[float] = None
     calories_target: Optional[float] = None
     protein_target_g: Optional[float] = None
     carbs_target_g: Optional[float] = None
@@ -27,6 +29,13 @@ class OnboardingCreate(BaseModel):
 class OnboardingResponse(BaseModel):
     user_id: Optional[UUID] = None
     display_name: Optional[str] = "New User"
+    goal_weight: Optional[float] = None
+    height_cm: Optional[float] = None
+    calories_target: Optional[float] = None
+    protein_target_g: Optional[float] = None
+    carbs_target_g: Optional[float] = None
+    fat_target_g: Optional[float] = None
+    water_target_ml: Optional[float] = None
     onboarding_completed: bool = False
 
     class Config:
@@ -120,6 +129,7 @@ class MealEntryCreate(BaseModel):
     meal_template_id: Optional[UUID] = None
     confidence: Optional[float] = None
     notes: Optional[str] = None
+    items: Optional[List[dict]] = None
 
 
 class MealEntryUpdate(BaseModel):
@@ -150,6 +160,7 @@ class MealEntryResponse(BaseModel):
     meal_template_id: Optional[UUID]
     confidence: Optional[float]
     notes: Optional[str]
+    items: Optional[List[dict]] = None
     created_at: datetime
     updated_at: datetime
 
@@ -271,6 +282,13 @@ class AnalyticsWeeklyResponse(BaseModel):
     carbs_pct: Optional[float] = 0
     fat_pct: Optional[float] = 0
     avg_water_ml: Optional[float] = 0
+    # New Hero Metrics
+    calories_hit_count: int = 0
+    protein_hit_count: int = 0
+    water_hit_count: int = 0
+    avg_first_meal: Optional[str] = None # HH:MM
+    avg_last_meal: Optional[str] = None # HH:MM
+    meals_per_day_avg: float = 0.0
 
 
 class AnalyticsTrendsResponse(BaseModel):
@@ -280,6 +298,11 @@ class AnalyticsTrendsResponse(BaseModel):
     water: List[float]
     weight: List[Optional[float]]
     adherence: List[Optional[float]]
+    # Benchmarks
+    calories_target: List[Optional[float]]
+    protein_target: List[Optional[float]]
+    water_target: List[Optional[float]]
+    weight_rolling_avg: List[Optional[float]]
 
 
 class AnalyticMealTypeDist(BaseModel):
@@ -298,7 +321,19 @@ class AnalyticsMealStatsResponse(BaseModel):
     time_distribution: List[AnalyticTimeDist]
 
 
-# ─── Weights ──────────────────────────────────────────────────────────────────
+class SocialSummaryResponse(BaseModel):
+    date: date
+    day_number: int # Relative to start of tracking
+    calories_actual: float
+    calories_target: float
+    protein_actual: float
+    protein_target: float
+    water_actual: float
+    water_target: float
+    weight: Optional[float]
+    training_done: bool = False
+    adherence_score: float
+    summary_text: str
 
 class WeightCreate(BaseModel):
     date: date
