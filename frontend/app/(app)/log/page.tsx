@@ -10,7 +10,7 @@ import QuickAddModal from '@/components/QuickAddModal'
 interface MealEntry {
   id: string; meal_name: string; entry_text_raw: string; logged_at: string
   calories: number; protein_g: number; carbs_g: number; fat_g: number
-  source_type: string; meal_type: string; notes?: string
+  source_type: string; meal_type: string; notes?: string; items?: any[]
 }
 
 const SRC_COLOR: Record<string, string> = { ai: '#d4ff00', db: '#00d9ff', template: 'white', manual: '#8a8a8a' }
