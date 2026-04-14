@@ -186,7 +186,7 @@ function AnalyticsContent() {
   if (!weekly || !trends) return null
 
   // Process trend data
-  const chartData = trends.dates.map((d: string, i: number) => ({
+  const chartData: any[] = trends.dates.map((d: string, i: number) => ({
     date: new Date(d).toLocaleDateString('en-US', { weekday: 'short' }),
     fullDate: new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     calories: trends.calories[i],
@@ -206,7 +206,7 @@ function AnalyticsContent() {
     { name: 'Protein', value: weekly.protein_pct || 0, color: '#d4ff00' },
     { name: 'Carbs', value: weekly.carbs_pct || 0, color: '#ff2d55' },
     { name: 'Fat', value: weekly.fat_pct || 0, color: '#00d9ff' }
-  ].filter(m => m.value > 0)
+  ].filter((m: any) => m.value > 0)
 
   // BMI Calculation Logic
   const currentWeight = trends?.weight_rolling_avg?.[trends.weight_rolling_avg.length - 1]
@@ -346,7 +346,7 @@ function AnalyticsContent() {
              </div>
              <div style={{ flex: 1, minHeight: '120px' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData.filter(d => d.weight)}>
+                  <ComposedChart data={chartData.filter((d: any) => d.weight)}>
                     <defs>
                       <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#d4ff00" stopOpacity={0.2}/>
@@ -411,7 +411,7 @@ function AnalyticsContent() {
            </div>
            <div style={{ height: 120 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData.filter(d => d.bmi)}>
+                <AreaChart data={chartData.filter((d: any) => d.bmi)}>
                   <YAxis hide domain={['auto', 'auto']} />
                   <Tooltip contentStyle={CHART_THEME.tooltip} />
                   <Area type="monotone" dataKey="bmi" stroke="#00d9ff" strokeWidth={3} fill="#00d9ff" fillOpacity={0.05} />
@@ -445,13 +445,13 @@ function AnalyticsContent() {
                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={macroData} innerRadius={28} outerRadius={38} paddingAngle={4} dataKey="value" stroke="none">
-                        {macroData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                        {macroData.map((e: any, i: number) => <Cell key={i} fill={e.color} />)}
                       </Pie>
                     </PieChart>
                  </ResponsiveContainer>
               </div>
               <div style={{ flex: 1 }}>
-                 {macroData.map(m => (
+                 {macroData.map((m: any) => (
                    <div key={m.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span style={{ fontSize: '10px', fontWeight: 800, color: '#8a8a8a' }}>{m.name.toUpperCase()}</span>
                       <span style={{ fontSize: '10px', fontWeight: 900, color: 'white' }}>{Math.round(m.value)}%</span>

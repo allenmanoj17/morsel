@@ -51,7 +51,7 @@ async def global_exception_handler(request, exc):
     return JSONResponse(
         status_code=500,
         content={"detail": f"Internal Server Error: {str(exc)}", "trace": error_detail if settings.app_env == "development" else None},
-        headers={"Access-Control-Allow-Origin": "http://localhost:3000"} 
+        headers={"Access-Control-Allow-Origin": "*"} 
     )
 
 app.include_router(meals_router.router)
