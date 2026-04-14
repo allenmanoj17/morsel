@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
 import { getLocalDateString } from '@/lib/utils'
+import { Plus, Loader2, Check, Zap, TrendingUp, ChevronRight, ChevronLeft, Droplets, Minus } from 'lucide-react'
 import QuickAddModal from '@/components/QuickAddModal'
 
 // ── Helpers ──
