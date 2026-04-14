@@ -12,7 +12,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
-import { Plus, Loader2, Check, Zap, TrendingUp, ChevronRight, ChevronLeft, Droplets, Minus } from 'lucide-react'
+import { getLocalDateString } from '@/lib/utils'
 import QuickAddModal from '@/components/QuickAddModal'
 
 // ── Helpers ──
@@ -23,7 +23,7 @@ function offsetDate(base: string, delta: number) {
 }
 
 function friendlyDate(iso: string) {
-  const t = new Date().toISOString().split('T')[0]
+  const t = getLocalDateString()
   const yest = offsetDate(t, -1)
   if (iso === t) return 'Today'
   if (iso === yest) return 'Yesterday'
@@ -104,7 +104,7 @@ function DashboardContent() {
   const [showAdd, setShowAdd] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
   const [selectedDate, setSelectedDate] = useState(today)
 
   const [review, setReview] = useState<any>(null)

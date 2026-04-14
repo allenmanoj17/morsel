@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
+import { getLocalDateString } from '@/lib/utils'
 import { Loader2, Save, Scale, ChevronRight, LogOut, User, Target as TargetIcon } from 'lucide-react'
 
 interface Target {
@@ -83,7 +84,7 @@ export default function SettingsPage() {
         carbs_target_g: form.carbs_target_g ? parseFloat(form.carbs_target_g) : null,
         fat_target_g: form.fat_target_g ? parseFloat(form.fat_target_g) : null,
         water_target_ml: form.water_target_ml ? parseFloat(form.water_target_ml) : 2500,
-        effective_from: new Date().toISOString().split('T')[0],
+        effective_from: getLocalDateString(),
       }
       if (def) await api.updateTarget(def.id, body, token)
       else await api.createTarget(body, token)

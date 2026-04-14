@@ -11,7 +11,7 @@ async function apiFetch(path: string, options: RequestInit = {}, token?: string)
 
   try {
     const controller = new AbortController()
-    const id = setTimeout(() => controller.abort(), 8000) // 8s timeout
+    const id = setTimeout(() => controller.abort(), 30000) // 30s timeout for LLM processing
 
     const res = await fetch(`${API_URL}${path}`, { 
       ...options, 
@@ -28,8 +28,10 @@ async function apiFetch(path: string, options: RequestInit = {}, token?: string)
     if (res.status === 204) return null
     return res.json()
   } catch (e: any) {
-    if (e.name === 'AbortError') throw new Error('Request timed out. Is the backend server stable?')
-    if (e.message?.includes('fetch')) throw new Error('Cannot connect to backend. Please check if uvicorn is running on port 8000.')
+    if (e.name === 'AbortError') throw new Error('Analysis timed out. The AI is processing a complex request, please try again.')
+    if (e.message?.toLowerCase().includes('fetch')) {
+      throw new Error('Connection failed. Please ensure the backend server is running and accessible.')
+    }
     throw e
   }
 }

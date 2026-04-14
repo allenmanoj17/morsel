@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
+import { getLocalDateString } from '@/lib/utils'
 import { Plus, Clock, Pencil, Trash2, Copy, Loader2, X, Save, ChevronLeft, ChevronRight, Utensils } from 'lucide-react'
 import QuickAddModal from '@/components/QuickAddModal'
 
@@ -82,11 +83,11 @@ function EditModal({ entry, token, onClose, onSaved }: {
 function offsetDate(base: string, delta: number) {
   const d = new Date(base + 'T12:00:00')
   d.setDate(d.getDate() + delta)
-  return d.toISOString().split('T')[0]
+  return getLocalDateString(d)
 }
 
 function friendlyDate(iso: string) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
   const yest  = offsetDate(today, -1)
   if (iso === today) return 'Today'
   if (iso === yest)  return 'Yesterday'
@@ -103,7 +104,7 @@ export default function LogPage() {
   const [today, setToday] = useState('')
 
   useEffect(() => {
-    const t = new Date().toISOString().split('T')[0]
+    const t = getLocalDateString()
     setToday(t)
     setDate(t)
   }, [])

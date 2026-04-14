@@ -10,6 +10,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { api } from '@/lib/api'
+import { getLocalDateString } from '@/lib/utils'
 import { X, Loader2, Sparkles, CheckCircle2, Edit3, Save, Clock } from 'lucide-react'
 
 interface ParsedResult {
@@ -94,7 +95,7 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
     if (!parsed) return
     setSaving(true)
     try {
-      const datePart = initialDate || new Date().toISOString().split('T')[0]
+      const datePart = initialDate || getLocalDateString()
       const [h, m] = selectedTime.split(':')
       const loggedAt = new Date(`${datePart}T${h}:${m}:00`).toISOString()
 
