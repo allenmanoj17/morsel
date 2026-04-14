@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, ScrollText, BookOpen, BarChart2, Settings } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/log', icon: ScrollText, label: 'Feed' },
-  { href: '/templates', icon: BookOpen, label: 'Templates' },
+  { href: '/', icon: LayoutDashboard, label: 'Today' },
+  { href: '/log', icon: ScrollText, label: 'Log' },
+  { href: '/templates', icon: BookOpen, label: 'Library' },
   { href: '/analytics', icon: BarChart2, label: 'Analytics' },
   { href: '/settings', icon: Settings, label: 'Profile' },
 ]

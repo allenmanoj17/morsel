@@ -19,11 +19,9 @@ from app.config import get_settings
 # Using the specific Claude Haiku version requested
 MODEL = "claude-haiku-4-5-20251001" 
 
-@lru_cache()
 def get_anthropic_client():
     """
-    Returns a singleton AsyncAnthropic client initialized only when needed.
-    This prevents 'SpawnProcess-1' errors during uvicorn reload on macOS.
+    Returns a fresh AsyncAnthropic client for thread-safe concurrent reviews.
     """
     settings = get_settings()
     return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)

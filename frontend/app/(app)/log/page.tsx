@@ -100,21 +100,32 @@ export default function LogPage() {
   const [token, setToken] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [editEntry, setEditEntry] = useState<MealEntry | null>(null)
-  const [date, setDate] = useState('')
-  const [today, setToday] = useState('')
-
-  useEffect(() => {
-    const t = getLocalDateString()
-    setToday(t)
-    setDate(t)
-  }, [])
+  const tInitial = getLocalDateString()
+  const [date, setDate] = useState(tInitial)
+  const [today, setToday] = useState(tInitial)
 
   const load = useCallback(async (tok: string, d: string) => {
+    if (!tok || !d) return 
+
     setLoading(true)
-    try { const data = await api.getMeals(d, tok); setEntries(data) }
+    try { 
+      const data = await api.getMeals(d, tok); 
+      setEntries(data) 
+      localStorage.setItem(`morsel_log_cache_${d}`, JSON.stringify(data))
+    }
     catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])
+
+  useEffect(() => {
+    if (!date) return
+    const cached = localStorage.getItem(`morsel_log_cache_${date}`)
+    if (cached) {
+      try {
+        setEntries(JSON.parse(cached))
+      } catch (e) {}
+    }
+  }, [date])
 
   useEffect(() => {
     const supabase = createClient()
@@ -146,7 +157,7 @@ export default function LogPage() {
       width: '100%',
       maxWidth: '1200px', 
       margin: '0 auto', 
-      padding: '24px 20px 140px', 
+      padding: '24px 20px 100px', 
       minHeight: '100dvh', 
       background: '#030409', 
       color: 'white',

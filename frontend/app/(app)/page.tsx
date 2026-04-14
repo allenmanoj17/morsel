@@ -115,18 +115,19 @@ function DashboardContent() {
   const [waterTotal, setWaterTotal] = useState(0)
 
   const load = useCallback(async (tok: string, date: string) => {
+    if (!tok || !date) return 
+
     try {
       setLoading(true)
       setError(null)
-      const [data, meals, water] = await Promise.all([
-        api.getDailyDashboard(date, tok),
-        api.getMeals(date, tok),
-        api.getWaterLogs(date, tok).catch(() => []),
-      ])
+      
+      const data = await api.getDailyDashboard(date, tok)
       setDashboard(data)
-      setRecentMeals(meals.slice(0, 3))
-      setWaterTotal(data.water.consumed)
+      setRecentMeals(data.entries?.slice(0, 3) || [])
+      setWaterTotal(data.water?.consumed || 0)
       setReview(null)
+      
+      localStorage.setItem(`morsel_dash_cache_${date}`, JSON.stringify(data))
     } catch (e: any) {
       console.error('DASHBOARD_LOAD_ERROR:', e)
       if (e.message?.includes('404')) router.push('/onboarding')
@@ -134,6 +135,19 @@ function DashboardContent() {
     }
     finally { setLoading(false) }
   }, [router])
+
+  useEffect(() => {
+    if (!selectedDate) return
+    const cached = localStorage.getItem(`morsel_dash_cache_${selectedDate}`)
+    if (cached) {
+      try {
+        const d = JSON.parse(cached)
+        setDashboard(d)
+        setRecentMeals(d.entries?.slice(0, 3) || [])
+        setWaterTotal(d.water?.consumed || 0)
+      } catch (e) {}
+    }
+  }, [selectedDate])
 
   useEffect(() => {
     const supabase = createClient()
@@ -144,7 +158,9 @@ function DashboardContent() {
 
         const metaName = session.user.user_metadata?.display_name || session.user.user_metadata?.full_name
         setDisplayName(metaName || session.user.email?.split('@')[0] || '')
-      } else { router.push('/login') }
+      } else { 
+        router.push('/login') 
+      }
     })
   }, [load, selectedDate, router])
 
@@ -179,7 +195,7 @@ function DashboardContent() {
       width: '100%',
       maxWidth: '1200px',
       margin: '0 auto',
-      padding: '24px 20px 140px',
+      padding: '24px 20px 100px',
       minHeight: '100dvh',
       background: '#030409',
       color: 'white',
@@ -231,7 +247,7 @@ function DashboardContent() {
           {/* ── Progress Card ── */}
           <div style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p style={S.label}>Daily Intake</p>
+              <p style={S.label}>CALORIES VS TARGET</p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '4px' }}>
                 <span style={{ fontSize: '42px', fontWeight: 900, color: 'white', letterSpacing: '-0.05em' }}>{Math.round(dashboard.calories.consumed)}</span>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: '#8a8a8a' }}>{dashboard.calories.target ? `/ ${dashboard.calories.target}` : 'kcal'}</span>
@@ -257,7 +273,7 @@ function DashboardContent() {
                 </div>
               </div>
               <div>
-                <p style={S.label}>Hydration Progress</p>
+                <p style={S.label}>WATER GOAL</p>
                 <p style={{ fontSize: '20px', fontWeight: 900 }}>
                   {dashboard.water.consumed} <span style={{ fontSize: '11px', color: '#8a8a8a', fontWeight: 600 }}>/ {dashboard.water.target || 2000}ml</span>
                 </p>
@@ -318,7 +334,7 @@ function DashboardContent() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Zap size={18} color="#d4ff00" style={{ filter: 'drop-shadow(0 0 5px #d4ff00)' }} />
-                <p style={{ fontSize: '14px', fontWeight: 800, color: '#d4ff00' }}>Coach</p>
+                <p style={{ fontSize: '14px', fontWeight: 800, color: '#d4ff00' }}>DAILY SUMMARY</p>
               </div>
               <button onClick={handleReview} disabled={generatingReview} style={{ background: '#d4ff00', color: '#030409', border: 'none', borderRadius: '12px', padding: '10px 18px', fontSize: '11px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 20px rgba(212,255,0,0.3)' }}>
                 {generatingReview ? <Loader2 size={12} className="animate-spin" /> : 'Get Analysis'}

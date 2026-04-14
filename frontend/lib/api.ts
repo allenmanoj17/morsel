@@ -145,6 +145,13 @@ export const api = {
     return apiFetch(url, {}, token)
   },
 
+  getCompositeAnalytics: (days: number, token: string, start?: string, end?: string) => {
+    let url = `/api/analytics/composite?days=${days}`
+    if (start) url += `&start_date=${start}`
+    if (end) url += `&end_date=${end}`
+    return apiFetch(url, {}, token)
+  },
+
   getSocialSummary: (date: string, token: string) =>
     apiFetch(`/api/analytics/social-summary/${date}`, {}, token),
 

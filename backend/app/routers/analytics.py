@@ -375,3 +375,37 @@ def get_meal_stats(
         type_distribution=type_dist,
         time_distribution=time_dist
     )
+
+
+@router.get("/composite")
+def get_composite_analytics(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    days: int = Query(30, ge=7, le=365),
+    user_id: str = Depends(get_current_user_id),
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    Composite endpoint to fetch all analytics data in a single HTTP request.
+    Reduces frontend-to-backend round-trips significantly.
+    """
+    if not end_date:
+        end_date = get_sydney_today()
+    if not start_date:
+        start_date = end_date - timedelta(days=days-1)
+    
+    # We'll just call the existing functions internally (or refactor to share logic)
+    # For now, to keep it clean and fast:
+    weekly = get_weekly_analytics(user_id, supabase)
+    trends = get_analytics_trends(start_date, end_date, days, user_id, supabase)
+    stats = get_meal_stats(start_date, end_date, days, user_id, supabase)
+    
+    today_str = get_sydney_today().isoformat()
+    social = get_social_summary(today_str, user_id, supabase)
+    
+    return {
+        "weekly": weekly,
+        "trends": trends,
+        "stats": stats,
+        "social": social
+    }

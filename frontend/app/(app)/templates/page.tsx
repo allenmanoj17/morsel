@@ -118,9 +118,19 @@ export default function TemplatesPage() {
   const router = useRouter()
 
   const load = useCallback(async (tok: string) => {
+    // ── Instant Load from Cache ──
+    const cached = localStorage.getItem('morsel_templates_cache')
+    if (cached) {
+      try {
+        setTemplates(JSON.parse(cached))
+      } catch (e) {}
+    }
+
     try {
       const data = await api.getTemplates(tok)
       setTemplates(data)
+      // Persist for next fast load
+      localStorage.setItem('morsel_templates_cache', JSON.stringify(data))
     } catch (e) {
       console.error(e)
     } finally {

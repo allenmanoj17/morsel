@@ -13,14 +13,9 @@ import anthropic
 from app.config import get_settings
 
 settings = get_settings()
-_client: Optional[anthropic.AsyncAnthropic] = None
-
-
 def get_client() -> anthropic.AsyncAnthropic:
-    global _client
-    if _client is None:
-        _client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    return _client
+    """Returns a fresh AsyncAnthropic client for thread-safe concurrent parsing."""
+    return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 
 # ── AU Localised System Prompt ──

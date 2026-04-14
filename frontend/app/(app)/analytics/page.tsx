@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
@@ -54,7 +54,7 @@ function WeeklyScoreGauge({ score, metrics }: any) {
       
       <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
         <div style={{ position: 'relative', width: '120px', height: '120px' }}>
-           <ResponsiveContainer width="100%" height="100%">
+           <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={3}>
              <PieChart>
                <Pie data={[{ value: score }, { value: 100 - score }]} innerRadius={45} outerRadius={55} startAngle={90} endAngle={450} stroke="none" dataKey="value">
                  <Cell fill="#d4ff00" />
@@ -139,26 +139,34 @@ function AnalyticsContent() {
   }, [rangeType, today])
 
   const load = useCallback(async (tok: string, s: string, e: string) => {
-    setLoading(true)
-    
-    const safeLoad = async (fn: () => Promise<any>, setter: (d: any) => void) => {
-      try {
-        const data = await fn()
-        setter(data)
-      } catch (err) {
-        console.error("Partial Load Error:", err)
-      }
+    try {
+      const composite = await api.getCompositeAnalytics(90, tok, s, e)
+      setWeekly(composite.weekly)
+      setTrends(composite.trends)
+      setStats(composite.stats)
+      setSocialData(composite.social)
+      localStorage.setItem('morsel_analytics_cache', JSON.stringify(composite))
+      
+      const prof = await api.getOnboarding(tok)
+      setProfile(prof)
+    } catch (err) {
+      console.error("Analytics Load Error:", err)
+    } finally {
+      setLoading(false)
     }
+  }, [])
 
-    await Promise.allSettled([
-      safeLoad(() => api.getWeeklyAnalytics(tok), setWeekly),
-      safeLoad(() => api.getAnalyticsTrends(90, tok, s, e), setTrends),
-      safeLoad(() => api.getMealStats(90, tok, s, e), setStats),
-      safeLoad(() => api.getSocialSummary(today, tok), setSocialData),
-      safeLoad(() => api.getOnboarding(tok), setProfile)
-    ])
-    
-    setLoading(false)
+  useEffect(() => {
+    const cached = localStorage.getItem('morsel_analytics_cache')
+    if (cached) {
+      try {
+        const d = JSON.parse(cached)
+        setWeekly(d.weekly)
+        setTrends(d.trends)
+        setStats(d.stats)
+        setSocialData(d.social)
+      } catch (e) {}
+    }
   }, [])
 
   useEffect(() => {
@@ -173,6 +181,49 @@ function AnalyticsContent() {
     grid: { stroke: 'rgba(255,255,255,0.05)', strokeDasharray: '3 3' }
   }
 
+  // ── BMI & Trend Processing Logic (Hoisted for Hook Safety) ──
+  const currentWeight = trends?.weight_rolling_avg?.[trends.weight_rolling_avg.length - 1]
+  const height = profile?.height_cm
+  const bmiValue = (currentWeight && height) ? (currentWeight / Math.pow(height / 100, 2)).toFixed(1) : null
+  
+  const bmiHUD = useMemo(() => {
+    if (!bmiValue) return { label: 'PENDING', color: '#5a5a5a', desc: 'Log weight to calculate composition.' }
+    const b = parseFloat(bmiValue)
+    const res = b < 18.5 ? { label: 'UNDERWEIGHT', color: '#ff2d55', desc: 'Status: Underweight. Consider a calorie surplus for optimal health.' }
+              : b < 25 ? { label: 'HEALTHY', color: '#d4ff00', desc: 'Status: Healthy Range. Keep maintaining your targets for consistency.' }
+              : b < 30 ? { label: 'OVERWEIGHT', color: '#ff2d55', desc: 'Status: Overweight. Stay consistent with your deficit for lean tissue goals.' }
+              : { label: 'OBESE', color: '#ff2d55', desc: 'Status: Above Range. Prioritize a steady deficit for long-term health.' }
+    return res
+  }, [bmiValue])
+
+  const chartData: any[] = useMemo(() => {
+    if (!trends) return []
+    return trends.dates.map((d: string, i: number) => ({
+      date: new Date(d).toLocaleDateString('en-US', { weekday: 'short' }),
+      fullDate: new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      calories: trends.calories[i],
+      caloriesTarget: trends.calories_target[i],
+      protein: trends.protein[i],
+      proteinTarget: trends.protein_target[i],
+      water: trends.water[i],
+      waterTarget: trends.water_target?.[i] || 2000,
+      weight: trends.weight[i],
+      weightRolling: trends.weight_rolling_avg[i],
+      bmi: (trends.weight[i] && profile?.height_cm) 
+        ? parseFloat((trends.weight[i] / Math.pow(profile.height_cm / 100, 2)).toFixed(1)) 
+        : null
+    }))
+  }, [trends, profile])
+
+  const macroData = useMemo(() => {
+    if (!weekly) return []
+    return [
+      { name: 'Protein', value: weekly.protein_pct || 0, color: '#d4ff00' },
+      { name: 'Carbs', value: weekly.carbs_pct || 0, color: '#ff2d55' },
+      { name: 'Fat', value: weekly.fat_pct || 0, color: '#00d9ff' }
+    ].filter((m: any) => m.value > 0)
+  }, [weekly])
+
   if (loading && !weekly) return (
     <div style={{ padding: '24px', background: '#030409', minHeight: '100vh' }}>
       <div style={{ height: 100, background: 'rgba(255,255,255,0.03)', borderRadius: '24px', marginBottom: '24px' }} className="animate-pulse" />
@@ -185,46 +236,8 @@ function AnalyticsContent() {
 
   if (!weekly || !trends) return null
 
-  // Process trend data
-  const chartData: any[] = trends.dates.map((d: string, i: number) => ({
-    date: new Date(d).toLocaleDateString('en-US', { weekday: 'short' }),
-    fullDate: new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    calories: trends.calories[i],
-    caloriesTarget: trends.calories_target[i],
-    protein: trends.protein[i],
-    proteinTarget: trends.protein_target[i],
-    water: trends.water[i],
-    waterTarget: trends.water_target?.[i] || 2000,
-    weight: trends.weight[i],
-    weightRolling: trends.weight_rolling_avg[i],
-    bmi: (trends.weight[i] && profile?.height_cm) 
-      ? parseFloat((trends.weight[i] / Math.pow(profile.height_cm / 100, 2)).toFixed(1)) 
-      : null
-  }))
-
-  const macroData = [
-    { name: 'Protein', value: weekly.protein_pct || 0, color: '#d4ff00' },
-    { name: 'Carbs', value: weekly.carbs_pct || 0, color: '#ff2d55' },
-    { name: 'Fat', value: weekly.fat_pct || 0, color: '#00d9ff' }
-  ].filter((m: any) => m.value > 0)
-
-  // BMI Calculation Logic
-  const currentWeight = trends?.weight_rolling_avg?.[trends.weight_rolling_avg.length - 1]
-  const height = profile?.height_cm
-  const bmi = (currentWeight && height) ? (currentWeight / Math.pow(height / 100, 2)).toFixed(1) : null
-  
-  const getBMIDetails = (val: string | null) => {
-    if (!val) return { label: 'Awaiting Height', color: '#5a5a5a', desc: 'Set height in settings to enable BMI' }
-    const b = parseFloat(val)
-    if (b < 18.5) return { label: 'Underweight', color: '#00d9ff', desc: 'Protocol focus: Surplus required' }
-    if (b < 25) return { label: 'Healthy Range', color: '#d4ff00', desc: 'Protocol focus: Maintenance/Integrity' }
-    if (b < 30) return { label: 'Overweight', color: '#ffa500', desc: 'Protocol focus: Precision deficit' }
-    return { label: 'Obese', color: '#ff2d55', desc: 'Protocol focus: Strategic intervention' }
-  }
-  const bmiHUD = getBMIDetails(bmi)
-
   const S = {
-    container: { width: '100%', maxWidth: '480px', margin: '0 auto', padding: '120px 16px 120px', minHeight: '100dvh', background: '#030409', color: 'white', display: 'flex', flexDirection: 'column' as const, boxSizing: 'border-box' } as React.CSSProperties,
+    container: { width: '100%', maxWidth: '480px', margin: '0 auto', padding: '60px 16px 100px', minHeight: '100dvh', background: '#030409', color: 'white', display: 'flex', flexDirection: 'column' as const, boxSizing: 'border-box' } as React.CSSProperties,
     card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px', width: '100%', boxSizing: 'border-box', position: 'relative' as const } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px', marginTop: '32px', display: 'block' } as React.CSSProperties
   }
@@ -236,7 +249,7 @@ function AnalyticsContent() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
         <div style={{ zIndex: 10 }}>
           <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-0.05em', color: 'white' }}>Performance</h1>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px' }}>Elite biological monitoring</p>
+          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px' }}>Stay on target ✨</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
           <button onClick={() => setShowSocial(true)} 
@@ -279,20 +292,20 @@ function AnalyticsContent() {
       {/* ── Level 1: Hero Analytics Hub ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '32px' }}>
           
-          {/* Main Hero: Weekly Adherence & Score Breakdown */}
+          {/* Main Hero: Weekly Score & Adherence */}
           <div style={{ ...S.card, background: 'linear-gradient(135deg, rgba(212,255,0,0.08) 0%, rgba(0,0,0,0) 100%)', border: '1px solid rgba(212,255,0,0.2)', margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
                className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-0 fill-mode-both">
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                 <div>
-                   <p style={{ fontSize: '10px', fontWeight: 900, color: '#d4ff00', letterSpacing: '0.15em', marginBottom: '8px' }}>PROTOCOL INTEGRITY</p>
+                   <p style={{ fontSize: '10px', fontWeight: 900, color: '#d4ff00', letterSpacing: '0.15em', marginBottom: '8px' }}>WEEKLY SCORE</p>
                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                      <h2 style={{ fontSize: '56px', fontWeight: 900, color: 'white', letterSpacing: '-0.05em' }}>{Math.round(weekly.adherence_avg || 0)}%</h2>
-                     <span style={{ fontSize: '14px', fontWeight: 800, color: '#8a8a8a' }}>SCORE</span>
+                     <span style={{ fontSize: '14px', fontWeight: 800, color: '#8a8a8a' }}>ADHERENCE</span>
                    </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(212,255,0,0.1)', padding: '6px 12px', borderRadius: '40px', color: '#d4ff00', fontSize: '11px', fontWeight: 900 }}>
-                      <Flame size={14} /> {weekly.logging_streak_days} DAY STREAK
+                      <TrendingUp size={14} /> {weekly.logging_streak_days} DAY STREAK
                    </div>
                 </div>
              </div>
@@ -311,21 +324,21 @@ function AnalyticsContent() {
              </div>
           </div>
 
-          {/* Hero 2: Physiological Status (BMI) */}
+          {/* Hero 2: Body Stats */}
           <div style={{ ...S.card, margin: 0 }} className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-50 fill-mode-both">
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <p style={{ fontSize: '10px', fontWeight: 900, color: '#8a8a8a', letterSpacing: '0.15em' }}>PHYSIOLOGICAL STATUS</p>
+                <p style={{ fontSize: '10px', fontWeight: 900, color: '#8a8a8a', letterSpacing: '0.15em' }}>BODY COMPOSITION</p>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: bmiHUD.color }}>{bmiHUD.label}</span>
              </div>
              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
-                <h2 style={{ fontSize: '40px', fontWeight: 900, color: 'white' }}>{bmi || '--'}</h2>
+                <h2 style={{ fontSize: '40px', fontWeight: 900, color: 'white' }}>{bmiValue || '--'}</h2>
                 <span style={{ fontSize: '12px', fontWeight: 800, color: '#5a5a5a' }}>BMI</span>
              </div>
              <p style={{ fontSize: '11px', color: '#8a8a8a', fontWeight: 600, marginBottom: '20px' }}>{bmiHUD.desc}</p>
-             {bmi && (
+             {bmiValue && (
                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', position: 'relative' }}>
                   <div style={{ 
-                    position: 'absolute', left: `${Math.min(100, (parseFloat(bmi)/40)*100)}%`, 
+                    position: 'absolute', left: `${Math.min(100, (parseFloat(bmiValue)/40)*100)}%`, 
                     width: '10px', height: '10px', background: bmiHUD.color, borderRadius: '50%', 
                     top: '-3px', marginLeft: '-5px', boxShadow: `0 0 15px ${bmiHUD.color}`,
                     transition: 'left 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s'
@@ -334,18 +347,18 @@ function AnalyticsContent() {
              )}
           </div>
 
-          {/* Hero 3: Body Weight Path */}
+          {/* Hero 3: Weight Trend */}
           <div style={{ ...S.card, display: 'flex', flexDirection: 'column', margin: 0 }}
                className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 fill-mode-both">
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 900, color: '#8a8a8a', letterSpacing: '0.1em' }}>WEIGHT TRAJECTORY</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: 900, color: '#8a8a8a', letterSpacing: '0.1em' }}>WEIGHT TREND</h3>
                 <div style={{ textAlign: 'right' }}>
                    <p style={{ fontSize: '18px', fontWeight: 900, color: 'white' }}>{chartData[chartData.length-1]?.weightRolling?.toFixed(1) || '--'}kg</p>
                    <p style={{ fontSize: '9px', color: '#5a5a5a', fontWeight: 800 }}>ROLLING AVG</p>
                 </div>
              </div>
-             <div style={{ flex: 1, minHeight: '120px' }}>
-                <ResponsiveContainer width="100%" height="100%">
+             <div style={{ height: '120px', position: 'relative', width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={3}>
                   <ComposedChart data={chartData.filter((d: any) => d.weight)}>
                     <defs>
                       <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
@@ -369,7 +382,7 @@ function AnalyticsContent() {
                 <div style={{ fontSize: '10px', color: '#5a5a5a', fontWeight: 800 }}>TARGET: {profile?.calories_target || '---'} KCAL</div>
              </div>
              <div style={{ height: 160 }}>
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={3}>
                   <ComposedChart data={chartData}>
                     <Tooltip contentStyle={CHART_THEME.tooltip} cursor={{ stroke: 'rgba(255,255,255,0.05)', strokeWidth: 20 }} />
                     <Bar dataKey="calories" fill="#00d9ff" radius={[6, 6, 0, 0]} opacity={0.6} barSize={16} />
@@ -387,7 +400,7 @@ function AnalyticsContent() {
                 <div style={{ fontSize: '10px', color: '#5a5a5a', fontWeight: 800 }}>TARGET: {profile?.protein_target_g || '---'}G</div>
              </div>
              <div style={{ height: 160 }}>
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={3}>
                   <ComposedChart data={chartData}>
                     <Tooltip contentStyle={CHART_THEME.tooltip} cursor={{ stroke: 'rgba(255,255,255,0.05)', strokeWidth: 20 }} />
                     <Bar dataKey="protein" fill="#d4ff00" radius={[6, 6, 0, 0]} opacity={0.6} barSize={16} />
@@ -410,7 +423,7 @@ function AnalyticsContent() {
               <div style={{ fontSize: '9px', color: '#5a5a5a', fontWeight: 800 }}>BIO-METRIC TREND</div>
            </div>
            <div style={{ height: 120 }}>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={3}>
                 <AreaChart data={chartData.filter((d: any) => d.bmi)}>
                   <YAxis hide domain={['auto', 'auto']} />
                   <Tooltip contentStyle={CHART_THEME.tooltip} />
@@ -427,7 +440,7 @@ function AnalyticsContent() {
               <div style={{ fontSize: '9px', color: '#5a5a5a', fontWeight: 800 }}>VS {profile?.water_target_ml || 2500}ML</div>
            </div>
            <div style={{ height: 120 }}>
-             <ResponsiveContainer width="100%" height="100%">
+             <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={3}>
                <BarChart data={chartData}>
                   <Tooltip contentStyle={CHART_THEME.tooltip} />
                   <Bar dataKey="water" fill="#00d9ff" radius={[4, 4, 4, 4]} barSize={12} opacity={0.8} />
@@ -442,7 +455,7 @@ function AnalyticsContent() {
            <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#ff2d55', marginBottom: '16px' }}>MACRO COMPOSITION</h3>
            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               <div style={{ width: '80px', height: '80px' }}>
-                 <ResponsiveContainer width="100%" height="100%">
+                 <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={3}>
                     <PieChart>
                       <Pie data={macroData} innerRadius={28} outerRadius={38} paddingAngle={4} dataKey="value" stroke="none">
                         {macroData.map((e: any, i: number) => <Cell key={i} fill={e.color} />)}

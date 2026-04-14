@@ -6,10 +6,10 @@ import { LayoutDashboard, ScrollText, BookOpen, BarChart2, Settings } from 'luci
 
 const NAV_ITEMS = [
   { href: '/', icon: LayoutDashboard, label: 'Today' },
-  { href: '/log', icon: ScrollText, label: 'Feed' },
-  { href: '/templates', icon: BookOpen, label: 'Templates' },
-  { href: '/analytics', icon: BarChart2, label: 'Trends' },
-  { href: '/settings', icon: Settings, label: 'Me' },
+  { href: '/log', icon: ScrollText, label: 'Log' },
+  { href: '/templates', icon: BookOpen, label: 'Library' },
+  { href: '/analytics', icon: BarChart2, label: 'Analytics' },
+  { href: '/settings', icon: Settings, label: 'Profile' },
 ]
 
 export default function BottomNav() {
