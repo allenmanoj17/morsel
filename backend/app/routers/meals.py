@@ -173,8 +173,11 @@ async def parse_meal(
                     total_prot += item.protein_g
                     total_carbs += item.carbs_g
                     total_fat += item.fat_g
-            except:
-                pass # Silently fail AI part if error
+            except (KeyError, ValueError, TypeError) as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"AI meal parse failed for input '{ai_text}': {type(e).__name__}: {str(e)}")
+                # Continue with partial data
                 
         return MealParseResponse(
             meal_name="Composite Meal",
@@ -299,7 +302,8 @@ def get_meals(
         .select("*")
         .eq("user_id", user_id)
         .eq("meal_date", date)
-        .order("logged_at")
+        .order("logged_at", desc=True)
+        .limit(100)  # Limit to prevent memory bomb
         .execute()
     )
     return resp.data or []

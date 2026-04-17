@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ScrollText, BookOpen, BarChart2, Settings } from 'lucide-react'
+import { LayoutDashboard, ScrollText, Dumbbell, BarChart2, User } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', icon: LayoutDashboard, label: 'Today' },
   { href: '/log', icon: ScrollText, label: 'Log' },
-  { href: '/templates', icon: BookOpen, label: 'Library' },
+  { href: '/workouts', icon: Dumbbell, label: 'Train' },
   { href: '/analytics', icon: BarChart2, label: 'Analytics' },
-  { href: '/settings', icon: Settings, label: 'Profile' },
+  { href: '/settings', icon: User, label: 'Settings' },
 ]
 
 export default function BottomNav() {
@@ -32,7 +32,7 @@ export default function BottomNav() {
       }}
     >
       <div
-        style={{ display: 'flex', width: '100%', justifyContent: 'space-around', alignItems: 'center', padding: '12px 10px 0' }}
+        style={{ display: 'flex', width: '100%', maxWidth: '560px', margin: '0 auto', justifyContent: 'space-around', alignItems: 'center', padding: '10px 8px 0', minHeight: '72px' }}
       >
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const active = pathname === href
@@ -46,8 +46,8 @@ export default function BottomNav() {
                 flexDirection: 'column', 
                 alignItems: 'center', 
                 gap: '6px', 
-                padding: '6px 4px', 
-                minWidth: '56px', 
+                padding: '6px 2px', 
+                minWidth: '52px', 
                 position: 'relative',
                 transition: 'all 0.2s ease'
               }}
@@ -72,7 +72,8 @@ export default function BottomNav() {
                 color: active ? 'white' : '#8a8a8a',
                 textTransform: 'uppercase',
                 letterSpacing: '0.1em',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
               }}>
                 {label}
               </span>

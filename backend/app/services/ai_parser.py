@@ -70,6 +70,7 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
         message = await client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
+            timeout=30,
             system=HAIKU_SYSTEM_PROMPT,
             messages=[
                 {"role": "user", "content": f"Parse this meal: {meal_text}"}
@@ -77,20 +78,16 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
         )
 
         raw_text = message.content[0].text.strip()
-        print(f"DEBUG: AI Response received (length {len(raw_text)})")
 
         # Extract JSON using regex (handles chatty models/markdown)
         json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
         if not json_match:
-            print(f"CRITICAL ERROR: No JSON found in AI response. Raw text snippet: {raw_text[:300]}...")
             raise ValueError("No JSON found in AI response")
 
         # Validate JSON
         try:
             parsed = json.loads(json_match.group())
-            print(f"DEBUG: Successfully parsed JSON. Food: {parsed.get('meal_name')}")
         except json.JSONDecodeError as e:
-            print(f"CRITICAL ERROR: JSON decoding failed: {str(e)}")
             raise ValueError(f"Invalid JSON in AI response: {str(e)}")
 
         return {
@@ -100,8 +97,18 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
             "output_tokens": message.usage.output_tokens,
             "model": "claude-haiku-4-5-20251001",
         }
+    except anthropic.APITimeoutError:
+        import logging
+        logging.error(f"Timeout parsing meal: {meal_text}")
+        return {
+            "error": "AI response timeout",
+            "status": "failed",
+            "details": "Claude API did not respond within 30 seconds"
+        }
     except Exception as e:
-        print(f"CRITICAL ERROR in AI Parse: {str(e)}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"AI parse error: {type(e).__name__}: {str(e)}")
         # Provide a diagnostic fallback response so the user knows WHY it failed
         return {
             "parsed": {

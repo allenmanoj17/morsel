@@ -20,7 +20,7 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://127.0.0.1:3000,https://morsel-log.vercel.app",
         alias="CORS_ORIGINS",
     )
-    secret_key: str = "morsel-secret-change-me"
+    secret_key: str = Field(..., alias="SECRET_KEY")  # Must be set via environment variables
 
     @property
     def cors_origins_list(self) -> List[str]:

@@ -1,67 +1,128 @@
 import { createClient } from './supabase/client'
+import { tokenService } from './tokenService'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-async function apiFetch(path: string, options: RequestInit = {}, token?: string) {
+async function tryRecoverSession(): Promise<string | null> {
+  try {
+    const supabase = createClient()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const currentSession = sessionData.session
+
+    if (currentSession?.access_token) {
+      tokenService.setToken(currentSession.access_token, currentSession.expires_in ?? 3600)
+      return currentSession.access_token
+    }
+
+    const { data: refreshData, error } = await supabase.auth.refreshSession()
+    if (error) throw error
+
+    const refreshedSession = refreshData.session
+    if (refreshedSession?.access_token) {
+      tokenService.setToken(refreshedSession.access_token, refreshedSession.expires_in ?? 3600)
+      return refreshedSession.access_token
+    }
+  } catch (error) {
+    console.error('Session recovery failed:', error)
+  }
+
+  return null
+}
+
+async function apiFetch(path: string, options: any = {}, token?: string): Promise<any> {
+  const { timeout = 60000, retries = 0, ...fetchOptions } = options
   let activeToken = token
 
-  // If no token provided or we suspect it's stale, try to resolve a fresh one
   if (!activeToken) {
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      activeToken = session?.access_token
+      activeToken = (await tokenService.getToken()) || undefined
     } catch (e) {
-      console.warn('API_TOKEN_RESOLUTION_FAILED:', e)
+      console.error('Token fetch failed:', e)
     }
   }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
+    ...(fetchOptions.headers as Record<string, string>),
   }
   if (activeToken) {
     headers['Authorization'] = `Bearer ${activeToken}`
   }
 
-  try {
-    const controller = new AbortController()
-    const id = setTimeout(() => controller.abort(), 60000)
+  const executeRequest = async (attempt: number, didRetryAuth = false): Promise<any> => {
+    try {
+      const controller = new AbortController()
+      const id = setTimeout(() => controller.abort(), timeout)
 
-    const res = await fetch(`${API_URL}${path}`, { 
-      ...options, 
-      headers,
-      signal: controller.signal 
-    })
-    
-    clearTimeout(id)
+      const requestHeaders: Record<string, string> = { ...headers }
+      if (activeToken) {
+        requestHeaders['Authorization'] = `Bearer ${activeToken}`
+      } else {
+        delete requestHeaders['Authorization']
+      }
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }))
-      const msg = err.detail || `API error: ${res.status}`
+      const res = await fetch(`${API_URL}${path}`, { 
+        ...fetchOptions, 
+        headers: requestHeaders,
+        signal: controller.signal 
+      })
       
-      // If we get an explicit expired JWT error, we should probably force a session reset
-      if (res.status === 401 || msg.toLowerCase().includes('expired')) {
-        console.error('SESSION_EXPIRED_OR_INVALID_JWT:', msg)
-        // Clean up session if it's dead
-        if (typeof window !== 'undefined') {
-          const supabase = createClient()
-          await supabase.auth.signOut()
-          window.location.href = '/login?error=session_expired'
+      clearTimeout(id)
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        const msg = err.detail || `API error: ${res.status}`
+        
+        if (res.status === 401 || msg.toLowerCase().includes('expired')) {
+          if (typeof window !== 'undefined') {
+            tokenService.clearToken()
+
+            if (!didRetryAuth) {
+              const recoveredToken = await tryRecoverSession()
+              if (recoveredToken) {
+                activeToken = recoveredToken
+                return executeRequest(attempt, true)
+              }
+            }
+
+            const supabase = createClient()
+            await supabase.auth.signOut()
+            localStorage.removeItem('morsel_auth_error')
+            window.location.href = '/login?error=session_expired'
+          }
+          throw new Error('Session expired. Please log in again.')
         }
+
+        // Retry on transient errors (server errors and timeouts)
+        if (attempt < retries && (res.status >= 500 || res.status === 408 || res.status === 429)) {
+           const backoff = Math.pow(2, attempt) * 1000
+           await new Promise(r => setTimeout(r, backoff))
+           return executeRequest(attempt + 1)
+        }
+        
+        throw new Error(msg)
+      }
+      if (res.status === 204) return null
+      return res.json()
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+         throw new Error(`Request timed out. Please check your connection and try again.`)
       }
       
-      throw new Error(msg)
+      if (attempt < retries && (e.message?.toLowerCase().includes('fetch') || e.message?.toLowerCase().includes('network'))) {
+         const backoff = Math.pow(2, attempt) * 1000
+         await new Promise(r => setTimeout(r, backoff))
+         return executeRequest(attempt + 1)
+      }
+
+      if (e.message?.toLowerCase().includes('fetch')) {
+        throw new Error('Network error. Unable to reach the server.')
+      }
+      throw e
     }
-    if (res.status === 204) return null
-    return res.json()
-  } catch (e: any) {
-    if (e.name === 'AbortError') throw new Error('Analysis timed out. The AI is processing a complex request, please try again.')
-    if (e.message?.toLowerCase().includes('fetch')) {
-      throw new Error('Connection failed. Please ensure the backend server is running and accessible.')
-    }
-    throw e
   }
+
+  return executeRequest(0)
 }
 
 export const api = {
@@ -70,7 +131,7 @@ export const api = {
     apiFetch('/api/meals/parse', { method: 'POST', body: JSON.stringify(body) }, token),
 
   getMeals: (date: string, token: string) =>
-    apiFetch(`/api/meals?date=${date}`, {}, token),
+    apiFetch(`/api/meals?date=${date}`, { retries: 3 }, token),
 
   createMeal: (body: object, token: string) =>
     apiFetch('/api/meals', { method: 'POST', body: JSON.stringify(body) }, token),
@@ -83,11 +144,11 @@ export const api = {
 
   // Dashboard
   getDailyDashboard: (date: string, token: string) =>
-    apiFetch(`/api/dashboard/daily?date=${date}`, {}, token),
+    apiFetch(`/api/dashboard/daily?date=${date}`, { timeout: 120000, retries: 3 }, token),
 
   // Targets
   getTargets: (token: string) =>
-    apiFetch('/api/targets', {}, token),
+    apiFetch('/api/targets', { retries: 3 }, token),
 
   createTarget: (body: object, token: string) =>
     apiFetch('/api/targets', { method: 'POST', body: JSON.stringify(body) }, token),
@@ -97,7 +158,7 @@ export const api = {
 
   // Onboarding
   getOnboarding: (token: string) =>
-    apiFetch('/api/onboarding', {}, token),
+    apiFetch('/api/onboarding', { retries: 3 }, token),
 
   completeOnboarding: (body: object, token: string) =>
     apiFetch('/api/onboarding', { method: 'POST', body: JSON.stringify(body) }, token),
@@ -105,9 +166,12 @@ export const api = {
   updateOnboarding: (body: object, token: string) =>
     apiFetch('/api/onboarding', { method: 'PATCH', body: JSON.stringify(body) }, token),
 
+  getProfileComposite: (token: string) =>
+    apiFetch('/api/onboarding/profile-composite', { timeout: 120000, retries: 3 }, token),
+
   // Templates
   getTemplates: (token: string) =>
-    apiFetch('/api/templates', {}, token),
+    apiFetch('/api/templates', { retries: 3 }, token),
 
   createTemplate: (body: object, token: string) =>
     apiFetch('/api/templates', { method: 'POST', body: JSON.stringify(body) }, token),
@@ -123,37 +187,37 @@ export const api = {
 
   // Foods
   searchFoods: (q: string, token: string) =>
-    apiFetch(`/api/foods/search?q=${encodeURIComponent(q)}`, {}, token),
+    apiFetch(`/api/foods/search?q=${encodeURIComponent(q)}`, { retries: 3 }, token),
 
   updateFood: (id: string, body: object, token: string) =>
     apiFetch(`/api/foods/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
 
   // Analytics
   getWeeklyAnalytics: (token: string) =>
-    apiFetch('/api/analytics/weekly', {}, token),
+    apiFetch('/api/analytics/weekly', { timeout: 120000, retries: 3 }, token),
 
   getAnalyticsTrends: (days: number, token: string, start?: string, end?: string) => {
     let url = `/api/analytics/trends?days=${days}`
     if (start) url += `&start_date=${start}`
     if (end) url += `&end_date=${end}`
-    return apiFetch(url, {}, token)
+    return apiFetch(url, { timeout: 120000, retries: 3 }, token)
   },
   getMealStats: (days: number, token: string, start?: string, end?: string) => {
     let url = `/api/analytics/meal-stats?days=${days}`
     if (start) url += `&start_date=${start}`
     if (end) url += `&end_date=${end}`
-    return apiFetch(url, {}, token)
+    return apiFetch(url, { retries: 3 }, token)
   },
 
   getCompositeAnalytics: (days: number, token: string, start?: string, end?: string) => {
     let url = `/api/analytics/composite?days=${days}`
     if (start) url += `&start_date=${start}`
     if (end) url += `&end_date=${end}`
-    return apiFetch(url, {}, token)
+    return apiFetch(url, { timeout: 120000, retries: 3 }, token)
   },
 
   getSocialSummary: (date: string, token: string) =>
-    apiFetch(`/api/analytics/social-summary/${date}`, {}, token),
+    apiFetch(`/api/analytics/social-summary/${date}`, { retries: 3 }, token),
 
   // Review
   generateEODReview: (date: string, token: string) =>
@@ -161,7 +225,7 @@ export const api = {
 
   // Weights
   getWeights: (token: string) =>
-    apiFetch('/api/weights', {}, token),
+    apiFetch('/api/weights', { retries: 3 }, token),
 
   createWeight: (body: object, token: string) =>
     apiFetch('/api/weights', { method: 'POST', body: JSON.stringify(body) }, token),
@@ -174,8 +238,40 @@ export const api = {
 
   // Water
   getWaterLogs: (date: string, token: string) =>
-    apiFetch(`/api/water?date=${date}`, {}, token),
+    apiFetch(`/api/water?date=${date}`, { retries: 3 }, token),
 
   logWater: (body: { date: string; amount_ml: number }, token: string) =>
     apiFetch('/api/water', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  // Supplements (Rituals)
+  getSupplementStack: (token: string) =>
+    apiFetch('/api/supplements/stack', { timeout: 60000, retries: 3 }, token),
+
+  createSupplement: (body: object, token: string) =>
+    apiFetch('/api/supplements/stack', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  deleteSupplement: (id: string, token: string) =>
+    apiFetch(`/api/supplements/stack/${id}`, { method: 'DELETE' }, token),
+
+  getSupplementLogs: (date: string, token: string) =>
+    apiFetch(`/api/supplements/logs?date=${date}`, { retries: 3 }, token),
+
+  logSupplement: (body: { supplement_id: string; date: string; taken: boolean }, token: string) =>
+    apiFetch('/api/supplements/logs', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  // Workouts (Kinetic)
+  getWorkoutSessions: (token: string) =>
+    apiFetch('/api/workouts/sessions', { retries: 3 }, token),
+
+  createWorkoutSession: (body: object, token: string) =>
+    apiFetch('/api/workouts/sessions', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  getExercises: (token: string) =>
+    apiFetch('/api/workouts/exercises', { retries: 3 }, token),
+
+  createExercise: (body: object, token: string) =>
+    apiFetch('/api/workouts/exercises', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  getExerciseHistory: (name: string, token: string) =>
+    apiFetch(`/api/workouts/history/${encodeURIComponent(name)}`, { retries: 3 }, token),
 }

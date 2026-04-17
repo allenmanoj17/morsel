@@ -61,6 +61,8 @@ def log_water(
             .execute()
         )
     
+    if not resp.data:
+        raise HTTPException(status_code=500, detail="Failed to save water log")
     return resp.data[0]
 
 @router.patch("/{record_id}", response_model=WaterLogResponse)

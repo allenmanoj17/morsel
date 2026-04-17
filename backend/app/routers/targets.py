@@ -81,4 +81,6 @@ def update_target(
         .eq("user_id", user_id)
         .execute()
     )
+    if not resp.data:
+        raise HTTPException(status_code=500, detail="Failed to update target")
     return resp.data[0]

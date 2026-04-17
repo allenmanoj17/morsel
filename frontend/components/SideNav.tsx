@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, ScrollText, BookOpen, BarChart2, Settings } from 'lucide-react'
+import { LayoutDashboard, ScrollText, Dumbbell, BarChart2, Settings } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', icon: LayoutDashboard, label: 'Today' },
   { href: '/log', icon: ScrollText, label: 'Log' },
-  { href: '/templates', icon: BookOpen, label: 'Library' },
+  { href: '/workouts', icon: Dumbbell, label: 'Train' },
   { href: '/analytics', icon: BarChart2, label: 'Analytics' },
-  { href: '/settings', icon: Settings, label: 'Profile' },
+  { href: '/settings', icon: Settings, label: 'Settings' },
 ]
 
 export default function SideNav() {
@@ -38,7 +38,7 @@ export default function SideNav() {
 
       <div className="flex flex-col gap-2 px-4 flex-1 mt-4">
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href
+          const active = href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
           return (
             <Link
               key={href}
@@ -82,8 +82,8 @@ export default function SideNav() {
              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#030409]" />
           </div>
           <div>
-            <div className="text-[13px] font-bold text-white tracking-tight">My Profile</div>
-            <div className="text-[10px] font-medium text-[#8a8a8a] mt-0.5">Manage Settings</div>
+            <div className="text-[13px] font-bold text-white tracking-tight">Settings</div>
+            <div className="text-[10px] font-medium text-[#8a8a8a] mt-0.5">Manage your account</div>
           </div>
         </div>
       </div>

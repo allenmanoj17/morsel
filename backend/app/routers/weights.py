@@ -50,6 +50,8 @@ def create_weight(
         "updated_at": now,
     }
     resp = supabase.table("weight_logs").insert(data).execute()
+    if not resp.data:
+        raise HTTPException(status_code=500, detail="Failed to create weight log")
     return resp.data[0]
 
 @router.patch("/{weight_id}", response_model=WeightResponse)
@@ -67,6 +69,8 @@ def update_weight(
     update_data["updated_at"] = datetime.utcnow().isoformat()
 
     resp = supabase.table("weight_logs").update(update_data).eq("id", weight_id).execute()
+    if not resp.data:
+        raise HTTPException(status_code=500, detail="Failed to update weight log")
     return resp.data[0]
 
 @router.delete("/{weight_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -78,4 +82,4 @@ def delete_weight(
     existing = supabase.table("weight_logs").select("id").eq("id", weight_id).eq("user_id", user_id).limit(1).execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Weight entry not found")
-    supabase.table("weight_logs").delete().eq("id", weight_id).execute()
+    supabase.table("weight_logs").delete().eq("id", weight_id).eq("user_id", user_id).execute()

@@ -15,6 +15,11 @@
   --glow-lime: 0 0 20px rgba(212, 255, 0, 0.15);
   --glow-blue: 0 0 20px rgba(0, 217, 255, 0.15);
   --glow-ruby: 0 0 20px rgba(255, 45, 85, 0.15);
+  --page-max: 1200px;
+  --page-gutter: 20px;
+  --page-top: 24px;
+  --page-bottom: 140px;
+  --bottom-nav-height: 88px;
 }
 
 * {
@@ -25,10 +30,16 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+html, body {
+  min-height: 100%;
 }
 
 /* ── Typography Overhaul ── */
@@ -64,6 +75,16 @@ input:focus {
   background: rgba(212, 255, 0, 0.02) !important;
 }
 
+input, textarea, select, button {
+  font: inherit;
+}
+
+@media (max-width: 767px) {
+  input, textarea, select {
+    font-size: 16px;
+  }
+}
+
 /* ── Custom Utilities ── */
 .text-accent { color: var(--accent); }
 .bg-accent { background: var(--accent); }
@@ -74,6 +95,55 @@ input:focus {
   body {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+.page-shell {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--page-top) var(--page-gutter) calc(var(--page-bottom) + env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  color: var(--foreground);
+  box-sizing: border-box;
+}
+
+.page-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.fab-safe {
+  bottom: calc(104px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --page-gutter: 24px;
+    --page-bottom: 48px;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --page-gutter: 16px;
+    --page-top: 20px;
+    --page-bottom: 132px;
+    --card-radius: 24px;
+    --input-radius: 16px;
   }
 }
 

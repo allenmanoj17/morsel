@@ -32,8 +32,13 @@ def get_current_user_id(
             )
             
         return user_response.user.id
+    except HTTPException:
+        raise  # Re-raise known HTTP exceptions
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Auth validation error: {type(e).__name__}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Could not validate credentials: {str(e)}",
+            detail="Invalid authentication credentials",
         )

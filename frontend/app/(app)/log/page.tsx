@@ -25,25 +25,48 @@ function EditModal({ entry, token, onClose, onSaved }: {
     time: new Date(entry.logged_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false }),
   })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const fields = [
-    { id: 'edit-name', label: 'Meal Name',   key: 'meal_name',  type: 'text',   suffix: '' },
+    { id: 'edit-name', label: 'Meal Name',   key: 'meal_name',  type: 'text',   suffix: '', min: 1, max: 100 },
     { id: 'edit-time', label: 'Log Time',    key: 'time',       type: 'time',   suffix: '' },
-    { id: 'edit-cal',  label: 'Calories',    key: 'calories',   type: 'number', suffix: 'kcal' },
-    { id: 'edit-prot', label: 'Protein',     key: 'protein_g',  type: 'number', suffix: 'g' },
-    { id: 'edit-carbs',label: 'Carbs',       key: 'carbs_g',    type: 'number', suffix: 'g' },
-    { id: 'edit-fat',  label: 'Fat',         key: 'fat_g',      type: 'number', suffix: 'g' },
+    { id: 'edit-cal',  label: 'Calories',    key: 'calories',   type: 'number', suffix: 'kcal', min: 0, max: 10000 },
+    { id: 'edit-prot', label: 'Protein',     key: 'protein_g',  type: 'number', suffix: 'g', min: 0, max: 500 },
+    { id: 'edit-carbs',label: 'Carbs',       key: 'carbs_g',    type: 'number', suffix: 'g', min: 0, max: 500 },
+    { id: 'edit-fat',  label: 'Fat',         key: 'fat_g',      type: 'number', suffix: 'g', min: 0, max: 200 },
+  ]
+  
+  const isValid = () => {
+    if (!vals.meal_name.trim()) return false
+    if (vals.calories < 0 || vals.protein_g < 0 || vals.carbs_g < 0 || vals.fat_g < 0) return false
+    return true
+  }
+
+  const macroSummary = [
+    { label: 'Calories', value: vals.calories, suffix: 'kcal', color: '#00d9ff' },
+    { label: 'Protein', value: vals.protein_g, suffix: 'g', color: '#d4ff00' },
+    { label: 'Carbs', value: vals.carbs_g, suffix: 'g', color: '#ff2d55' },
+    { label: 'Fat', value: vals.fat_g, suffix: 'g', color: '#8a8a8a' },
   ]
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '16px' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(3, 4, 9, 0.8)', backdropFilter: 'blur(24px)' }} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: '440px', background: 'var(--background)', borderRadius: 'var(--card-radius)', padding: '32px', border: '1px solid var(--glass-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.7)' }}>
+      <div style={{ position: 'relative', width: '100%', maxWidth: '440px', maxHeight: '85dvh', overflowY: 'auto', background: 'var(--background)', borderRadius: 'var(--card-radius)', padding: '32px', border: '1px solid var(--glass-border)', boxShadow: '0 20px 50px rgba(0,0,0,0.7)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'white', letterSpacing: '-0.04em' }}>Edit Entry</h2>
           <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={18} color="white" />
           </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px', marginBottom: '24px' }}>
+          {macroSummary.map(item => (
+            <div key={item.label} style={{ borderRadius: '16px', padding: '14px 10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+              <p style={{ fontSize: '17px', fontWeight: 900, color: item.color }}>{Math.round(item.value || 0)}</p>
+              <p style={{ fontSize: '9px', color: '#8a8a8a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '4px' }}>{item.label}</p>
+              <p style={{ fontSize: '9px', color: '#5a5a5a', marginTop: '2px' }}>{item.suffix}</p>
+            </div>
+          ))}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
           {fields.map(({ id, label, key, type, suffix }) => (
@@ -52,7 +75,21 @@ function EditModal({ entry, token, onClose, onSaved }: {
               <div style={{ position: 'relative' }}>
                 <input id={id} type={type}
                   value={String((vals as any)[key])}
-                  onChange={e => setVals(v => ({ ...v, [key]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))}
+                  onChange={e => {
+                    let newVal: any = e.target.value
+                    if (type === 'number') {
+                      newVal = parseFloat(newVal) || 0
+                      // Validate min/max
+                      if ('min' in (fields.find(f => f.key === key) || {})) {
+                        const field = fields.find(f => f.key === key)!
+                        newVal = Math.max(field.min || 0, Math.min(field.max || 999999, newVal))
+                      }
+                    }
+                    setVals(v => ({ ...v, [key]: newVal }))
+                    setError('')
+                  }}
+                  min={"min" in (fields.find(f => f.key === key) || {}) ? (fields.find(f => f.key === key) || {}).min : undefined}
+                  max={"max" in (fields.find(f => f.key === key) || {}) ? (fields.find(f => f.key === key) || {}).max : undefined}
                   style={{ width: '100%', borderRadius: '14px', padding: '14px 16px', paddingRight: suffix ? '52px' : '16px', fontSize: '14px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white' }}
                 />
                 {suffix && <span style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' }}>{suffix}</span>}
@@ -60,18 +97,42 @@ function EditModal({ entry, token, onClose, onSaved }: {
             </div>
           ))}
         </div>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#8a8a8a', display: 'block', marginBottom: '8px', marginLeft: '4px' }}>Notes</label>
+          <textarea
+            value={vals.notes}
+            onChange={e => {
+              setVals(v => ({ ...v, notes: e.target.value }))
+              setError('')
+            }}
+            placeholder="Add a short note"
+            rows={3}
+            style={{ width: '100%', borderRadius: '14px', padding: '14px 16px', fontSize: '14px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white', resize: 'vertical' }}
+          />
+        </div>
+        {error && (
+          <div style={{ marginBottom: '20px', padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,45,85,0.08)', border: '1px solid rgba(255,45,85,0.16)' }}>
+            <p style={{ fontSize: '12px', fontWeight: 800, color: '#ff2d55' }}>{error}</p>
+          </div>
+        )}
         <button id="save-edit-btn"
           onClick={async () => {
+            if (!isValid()) {
+              setError('Add a meal name and valid numbers.')
+              return
+            }
             setSaving(true);
             try {
               const datePart = entry.logged_at.split('T')[0]
               const loggedAt = new Date(`${datePart}T${vals.time}:00`).toISOString()
               await api.updateMeal(entry.id, { ...vals, logged_at: loggedAt }, token);
               onSaved()
-            } catch {} finally { setSaving(false) }
+            } catch (e: any) {
+              setError(e.message || 'Could not save this entry.')
+            } finally { setSaving(false) }
           }}
-          disabled={saving}
-          style={{ width: '100%', padding: '18px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', fontWeight: 900, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          disabled={saving || !isValid()}
+          style={{ width: '100%', padding: '18px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', fontWeight: 900, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: saving || !isValid() ? 'not-allowed' : 'pointer', opacity: saving || !isValid() ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
         >
           {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={20} /> Save Changes</>}
         </button>
@@ -100,6 +161,8 @@ export default function LogPage() {
   const [token, setToken] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [editEntry, setEditEntry] = useState<MealEntry | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [mealTypeFilter, setMealTypeFilter] = useState('all')
   const tInitial = getLocalDateString()
   const [date, setDate] = useState(tInitial)
   const [today, setToday] = useState(tInitial)
@@ -123,7 +186,9 @@ export default function LogPage() {
     if (cached) {
       try {
         setEntries(JSON.parse(cached))
-      } catch (e) {}
+      } catch (e: any) {
+        console.error('Failed to parse log cache:', e)
+      }
     }
   }, [date])
 
@@ -151,16 +216,31 @@ export default function LogPage() {
 
   const formatTime = (iso: string) => new Date(iso).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
   const isToday = date === today
+  const filteredEntries = entries.filter(entry => {
+    const matchesSearch = !searchQuery.trim() || entry.meal_name.toLowerCase().includes(searchQuery.toLowerCase()) || entry.entry_text_raw?.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesType = mealTypeFilter === 'all' || entry.meal_type === mealTypeFilter
+    return matchesSearch && matchesType
+  })
+  const totals = filteredEntries.reduce((acc, entry) => {
+    acc.calories += entry.calories || 0
+    acc.protein += entry.protein_g || 0
+    acc.carbs += entry.carbs_g || 0
+    acc.fat += entry.fat_g || 0
+    return acc
+  }, { calories: 0, protein: 0, carbs: 0, fat: 0 })
+  const mealTypes = ['all', ...Array.from(new Set(entries.map(entry => entry.meal_type).filter(Boolean)))]
 
   const S = {
     container: { 
       width: '100%',
       maxWidth: '1200px', 
       margin: '0 auto', 
-      padding: '24px 20px 100px', 
+      padding: '24px 20px 140px', 
       minHeight: '100dvh', 
       background: '#030409', 
       color: 'white',
+      display: 'flex',
+      flexDirection: 'column' as const,
       boxSizing: 'border-box'
     } as React.CSSProperties,
     card: { background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--card-radius)', padding: '24px', marginBottom: '16px', backdropFilter: 'blur(16px)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' } as React.CSSProperties,
@@ -174,7 +254,7 @@ export default function LogPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
         <div>
           <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: '#d4ff00' }}>Meal Log</h1>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Your daily food history ✨</p>
+          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Your daily food log.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '8px' }}>
           <button onClick={() => setDate(offsetDate(date, -1))} style={{ width: '32px', height: '32px', border: 'none', background: 'transparent', cursor: 'pointer' }}>
@@ -187,21 +267,82 @@ export default function LogPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div style={{ marginBottom: '24px' }}>
+        <input
+          type="text"
+          placeholder="Search meals by name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '14px 18px',
+            borderRadius: '16px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.03)',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: 700,
+            outline: 'none',
+            transition: 'all 0.2s ease'
+          }}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '12px', marginBottom: '24px' }}>
+        {[
+          { label: 'Meals', value: filteredEntries.length, suffix: 'items', color: 'white' },
+          { label: 'Calories', value: Math.round(totals.calories), suffix: 'kcal', color: '#00d9ff' },
+          { label: 'Protein', value: Math.round(totals.protein), suffix: 'g', color: '#d4ff00' },
+          { label: 'Carbs', value: Math.round(totals.carbs), suffix: 'g', color: '#ff2d55' }
+        ].map(card => (
+          <div key={card.label} style={{ ...S.card, marginBottom: 0, padding: '18px' }}>
+            <p style={{ fontSize: '22px', fontWeight: 900, color: card.color }}>{card.value}</p>
+            <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 800, marginTop: '8px' }}>{card.label}</p>
+            <p style={{ fontSize: '10px', color: '#5a5a5a', marginTop: '2px' }}>{card.suffix}</p>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', marginBottom: '16px', scrollbarWidth: 'none' }}>
+        {mealTypes.map(type => (
+          <button
+            key={type}
+            onClick={() => setMealTypeFilter(type)}
+            style={{
+              flexShrink: 0,
+              padding: '10px 14px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: mealTypeFilter === type ? 'rgba(212,255,0,0.15)' : 'rgba(255,255,255,0.03)',
+              color: mealTypeFilter === type ? '#d4ff00' : '#8a8a8a',
+              fontSize: '11px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              cursor: 'pointer'
+            }}
+          >
+            {type.replace('-', ' ')}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {[1,2,3].map(i => <div key={i} style={{ ...S.card, height: 110, opacity: 0.3 }} />)}
         </div>
-      ) : entries.length === 0 ? (
+      ) : (() => {
+        return filteredEntries.length === 0 ? (
         <div style={{ ...S.card, textAlign: 'center', padding: '60px 24px' }}>
           <div style={{ width: '56px', height: '56px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
              <Utensils size={24} color="#5a5a5a" />
           </div>
           <p style={{ fontSize: '16px', fontWeight: 800 }}>No logs found</p>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Tap the + button to start loggin'.</p>
+          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Tap the + button to add a meal.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {entries.map(entry => (
+          {filteredEntries.map((entry: any) => (
             <div key={entry.id} style={{ ...S.card, padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -233,6 +374,9 @@ export default function LogPage() {
                     )}
                  </div>
                 <div style={{ display: 'flex', gap: '4px' }}>
+                   <button onClick={() => handleDuplicate(entry)} style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(212,255,0,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Copy size={14} color="#d4ff00" />
+                   </button>
                    <button onClick={() => setEditEntry(entry)} style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Pencil size={14} color="white" />
                    </button>
@@ -257,11 +401,12 @@ export default function LogPage() {
             </div>
           ))}
         </div>
-      )}
+        )
+      })()}
 
       {/* FAB */}
       {isToday && (
-        <button onClick={() => setShowAdd(true)} style={{ position: 'fixed', bottom: '92px', left: '50%', transform: 'translateX(-50%)', width: '64px', height: '64px', borderRadius: '22px', background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(212,255,0,0.4)', zIndex: 50 }}>
+        <button onClick={() => setShowAdd(true)} style={{ position: 'fixed', bottom: '120px', left: '50%', transform: 'translateX(-50%)', width: '64px', height: '64px', borderRadius: '22px', background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 12px 40px rgba(212,255,0,0.4)', zIndex: 50 }}>
           <Plus size={32} strokeWidth={3} />
         </button>
       )}

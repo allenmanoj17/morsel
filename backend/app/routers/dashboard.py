@@ -40,10 +40,15 @@ def get_daily_dashboard(
     )
     entries = entries_resp.data or []
 
-    cal   = sum(float(e.get("calories",  0) or 0) for e in entries)
-    prot  = sum(float(e.get("protein_g", 0) or 0) for e in entries)
-    carbs = sum(float(e.get("carbs_g",   0) or 0) for e in entries)
-    fat   = sum(float(e.get("fat_g",     0) or 0) for e in entries)
+    try:
+        cal   = sum(float(e.get("calories",  0) or 0) for e in entries)
+        prot  = sum(float(e.get("protein_g", 0) or 0) for e in entries)
+        carbs = sum(float(e.get("carbs_g",   0) or 0) for e in entries)
+        fat   = sum(float(e.get("fat_g",     0) or 0) for e in entries)
+    except Exception as e:
+        import logging
+        logging.error(f"DASHBOARD_AGGREGATION_FAILED: {str(e)}")
+        cal = prot = carbs = fat = 0.0
 
     # Active target
     t_resp = (

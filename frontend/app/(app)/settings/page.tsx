@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
 import { getLocalDateString } from '@/lib/utils'
-import { Loader2, Save, Scale, ChevronRight, LogOut, User, Target as TargetIcon } from 'lucide-react'
+import { Loader2, Save, Scale, ChevronRight, LogOut, User, Target as TargetIcon, BookOpen, Zap as ZapIcon, Dumbbell, BarChart3 } from 'lucide-react'
 
 interface Target {
   id: string; target_type: string; calories_target: number | null
@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const [token, setToken] = useState('')
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string>('')
   const [displayName, setDisplayName] = useState('')
   const [goalWeight, setGoalWeight] = useState('')
   const [actualWeight, setActualWeight] = useState<number | null>(null)
@@ -61,101 +62,211 @@ export default function SettingsPage() {
     return { label: 'Obese', color: '#ff2d55' }
   }
   const bmiCat = getBMICategory(bmiValue)
+  const activeTarget = useMemo(() => targets.find(t => t.target_type === 'default') || null, [targets])
+  const goalDelta = useMemo(() => {
+    if (actualWeight === null || !goalWeight) return null
+    return Number((actualWeight - parseFloat(goalWeight)).toFixed(1))
+  }, [actualWeight, goalWeight])
+
+  const applyPreset = (preset: 'fat_loss' | 'maintain' | 'muscle_gain') => {
+    if (preset === 'fat_loss') {
+      setForm({
+        calories_target: '2000',
+        protein_target_g: '180',
+        carbs_target_g: '180',
+        fat_target_g: '60',
+        water_target_ml: form.water_target_ml || '2500'
+      })
+      return
+    }
+    if (preset === 'maintain') {
+      setForm({
+        calories_target: '2400',
+        protein_target_g: '170',
+        carbs_target_g: '250',
+        fat_target_g: '70',
+        water_target_ml: form.water_target_ml || '2500'
+      })
+      return
+    }
+    setForm({
+      calories_target: '2800',
+      protein_target_g: '180',
+      carbs_target_g: '320',
+      fat_target_g: '80',
+      water_target_ml: form.water_target_ml || '3000'
+    })
+  }
 
   useEffect(() => {
+    const cached = localStorage.getItem('morsel_settings_cache')
+    if (cached) {
+      try {
+        const d = JSON.parse(cached)
+        setDisplayName(d.displayName || '')
+        setActualWeight(d.actualWeight || null)
+        setHeightCm(d.heightCm || '')
+        setGoalWeight(d.goalWeight || '')
+        if (d.form) setForm(d.form)
+      } catch (e: any) {
+        console.error('Failed to parse settings cache:', e)
+      }
+    }
+
     const supabase = createClient()
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return
       setToken(session.access_token)
       
       const metaName = session.user.user_metadata?.display_name || session.user.user_metadata?.full_name
-      setDisplayName(metaName || session.user.email?.split('@')[0] || '')
+      if (!displayName) setDisplayName(metaName || session.user.email?.split('@')[0] || '')
 
       try {
-        const [data, onb, weights] = await Promise.all([
-          api.getTargets(session.access_token),
-          api.getOnboarding(session.access_token).catch(() => null),
-          api.getWeights(session.access_token).catch(() => []),
-        ])
-        setTargets(data)
-        if (onb?.display_name) setDisplayName(onb.display_name)
-        if (onb?.goal_weight) setGoalWeight(onb.goal_weight.toString())
-        if (onb?.height_cm) setHeightCm(onb.height_cm.toString())
+        const composite = await api.getProfileComposite(session.access_token)
+        const { profile: onb, targets: data, weights } = composite
         
-        // Latest Weight
+        setTargets(data)
+        let freshDisplayName = displayName
+        let freshGoalWeight = goalWeight
+        let freshHeightCm = heightCm
+        let freshActualWeight = actualWeight
+
+        if (onb?.display_name) { setDisplayName(onb.display_name); freshDisplayName = onb.display_name; }
+        if (onb?.goal_weight) { setGoalWeight(onb.goal_weight.toString()); freshGoalWeight = onb.goal_weight.toString(); }
+        if (onb?.height_cm) { setHeightCm(onb.height_cm.toString()); freshHeightCm = onb.height_cm.toString(); }
+        
         if (weights && weights.length > 0) {
-          const latest = weights.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+          const latest = weights[0] // Already sorted by backend
           setActualWeight(latest.weight_value)
+          freshActualWeight = latest.weight_value
         }
 
         const def = data.find((t: Target) => t.target_type === 'default')
-        if (def) setForm({
-          calories_target: def.calories_target?.toString() || '',
-          protein_target_g: def.protein_target_g?.toString() || '',
-          carbs_target_g: def.carbs_target_g?.toString() || '',
-          fat_target_g: def.fat_target_g?.toString() || '',
-          water_target_ml: def.water_target_ml?.toString() || '2500',
-        })
-      } catch (e) { console.error(e) }
+        let freshForm = form
+        if (def) {
+          freshForm = {
+            calories_target: def.calories_target?.toString() || '',
+            protein_target_g: def.protein_target_g?.toString() || '',
+            carbs_target_g: def.carbs_target_g?.toString() || '',
+            fat_target_g: def.fat_target_g?.toString() || '',
+            water_target_ml: def.water_target_ml?.toString() || '2500',
+          }
+          setForm(freshForm)
+        }
+
+        localStorage.setItem('morsel_settings_cache', JSON.stringify({
+          displayName: freshDisplayName,
+          actualWeight: freshActualWeight,
+          heightCm: freshHeightCm,
+          goalWeight: freshGoalWeight,
+          form: freshForm
+        }))
+
+      } catch (e) { console.error("COMPOSITE_LOAD_FAILED:", e) }
       finally { setLoading(false) }
     })
   }, [])
 
   const handleSave = async () => {
+    setError('')
     setSaving(true)
     try {
+      const caloriesVal = form.calories_target ? parseFloat(form.calories_target) : null
+      const proteinVal = form.protein_target_g ? parseFloat(form.protein_target_g) : null
+      const carbsVal = form.carbs_target_g ? parseFloat(form.carbs_target_g) : null
+      const fatVal = form.fat_target_g ? parseFloat(form.fat_target_g) : null
+      const waterVal = form.water_target_ml ? parseFloat(form.water_target_ml) : 2500
+
+      if ((caloriesVal !== null && caloriesVal < 0) || (caloriesVal !== null && caloriesVal > 10000)) {
+        setError('Calories must be between 0-10000')
+        setSaving(false)
+        return
+      }
+      if ((proteinVal !== null && proteinVal < 0) || (proteinVal !== null && proteinVal > 500)) {
+        setError('Protein must be between 0-500g')
+        setSaving(false)
+        return
+      }
+      if ((waterVal !== null && waterVal < 0) || (waterVal > 10000)) {
+        setError('Water must be between 0-10000ml')
+        setSaving(false)
+        return
+      }
+
       const def = targets.find(t => t.target_type === 'default')
       const body = {
         target_type: 'default',
-        calories_target: form.calories_target ? parseFloat(form.calories_target) : null,
-        protein_target_g: form.protein_target_g ? parseFloat(form.protein_target_g) : null,
-        carbs_target_g: form.carbs_target_g ? parseFloat(form.carbs_target_g) : null,
-        fat_target_g: form.fat_target_g ? parseFloat(form.fat_target_g) : null,
-        water_target_ml: form.water_target_ml ? parseFloat(form.water_target_ml) : 2500,
+        calories_target: caloriesVal,
+        protein_target_g: proteinVal,
+        carbs_target_g: carbsVal,
+        fat_target_g: fatVal,
+        water_target_ml: waterVal,
         effective_from: getLocalDateString(),
       }
       if (def) await api.updateTarget(def.id, body, token)
       else await api.createTarget(body, token)
+      localStorage.removeItem('morsel_settings_cache')
       setSuccess(true); setTimeout(() => setSuccess(false), 2500)
-    } catch (e) { console.error(e) }
+    } catch (e: any) { 
+      console.error(e)
+      setError(e.message || 'Failed to save targets. Please try again.')
+    }
     finally { setSaving(false) }
   }
 
   const handleSaveName = async () => {
     if (!displayName) return
+    setError('')
     setSavingName(true)
-    try { 
+    try {
+      const heightVal = heightCm ? parseFloat(heightCm) : null
+      const weightVal = goalWeight ? parseFloat(goalWeight) : null
+      const actualVal = actualWeight
+
+      if ((heightVal !== null && heightVal < 100) || (heightVal !== null && heightVal > 250)) {
+        setError('Height must be between 100-250cm')
+        setSavingName(false)
+        return
+      }
+      if ((weightVal !== null && weightVal < 30) || (weightVal !== null && weightVal > 300)) {
+        setError('Goal weight must be between 30-300kg')
+        setSavingName(false)
+        return
+      }
+      if ((actualVal !== null && actualVal < 30) || (actualVal !== null && actualVal > 300)) {
+        setError('Actual weight must be between 30-300kg')
+        setSavingName(false)
+        return
+      }
+
        const supabase = createClient()
-       // 1. Update Core Profile Shard
        await api.updateOnboarding({ 
          display_name: displayName,
-         goal_weight: goalWeight ? parseFloat(goalWeight) : null,
-         height_cm: heightCm ? parseFloat(heightCm) : null
+         goal_weight: weightVal,
+         height_cm: heightVal
        }, token) 
 
-       // 2. Log Weight to Engine if changed
-       if (actualWeight !== null) {
+       if (actualVal !== null) {
          await api.createWeight({
             date: getLocalDateString(),
-            weight_value: actualWeight,
+            weight_value: actualVal,
             unit: 'kg'
          }, token)
        }
        
-       // 3. Sync Auth Metadata
        await supabase.auth.updateUser({ data: { display_name: displayName } })
        
-       // 3. Force Re-fetch
        const p = await api.getOnboarding(token)
        setDisplayName(p.display_name)
        setGoalWeight(p.goal_weight?.toString() || '')
        setHeightCm(p.height_cm?.toString() || '')
        
+       localStorage.removeItem('morsel_settings_cache')
        setSuccess(true); setTimeout(() => setSuccess(false), 2500)
     }
-    catch (e) {
+    catch (e: any) {
       console.error("SAVE_ERROR:", e)
-      alert("Verification failed. Please try again.")
+      setError(e.message || "Failed to save profile. Please try again.")
     } finally { setSavingName(false) }
   }
 
@@ -186,12 +297,42 @@ export default function SettingsPage() {
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.04em', color: '#d4ff00' }}>Settings</h1>
-        <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Customise your physiological targets ✨</p>
+        <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '6px' }}>Update your profile, weight, and goals.</p>
       </div>
 
-      {/* ── Biological Status ── */}
-      <p style={S.label}>Physiological Status</p>
+      {(error || success) && (
+        <div style={{ ...S.card, marginBottom: '20px', padding: '16px 18px', border: success ? '1px solid rgba(212,255,0,0.25)' : '1px solid rgba(255,45,85,0.2)', background: success ? 'rgba(212,255,0,0.06)' : 'rgba(255,45,85,0.06)' }}>
+          <p style={{ fontSize: '13px', fontWeight: 800, color: success ? '#d4ff00' : '#ff2d55' }}>
+            {success ? 'Saved.' : error}
+          </p>
+        </div>
+      )}
+
+      <p style={S.label}>Profile</p>
       <div style={{ ...S.card, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+          <div style={{ borderRadius: '16px', padding: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.14em' }}>Current Weight</p>
+            <p style={{ fontSize: '24px', fontWeight: 900, color: 'white', marginTop: '8px' }}>{actualWeight !== null ? actualWeight : '--'} <span style={{ fontSize: '12px', color: '#8a8a8a' }}>kg</span></p>
+          </div>
+          <div style={{ borderRadius: '16px', padding: '16px', background: 'rgba(212,255,0,0.03)', border: '1px solid rgba(212,255,0,0.12)' }}>
+            <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.14em' }}>Goal Weight</p>
+            <p style={{ fontSize: '24px', fontWeight: 900, color: 'white', marginTop: '8px' }}>{goalWeight || '--'} <span style={{ fontSize: '12px', color: '#8a8a8a' }}>kg</span></p>
+          </div>
+          <div style={{ borderRadius: '16px', padding: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.14em' }}>BMI</p>
+            <p style={{ fontSize: '24px', fontWeight: 900, color: bmiCat.color, marginTop: '8px' }}>{bmiValue}</p>
+            <p style={{ fontSize: '10px', color: bmiCat.color, fontWeight: 800, marginTop: '4px', textTransform: 'uppercase' }}>{bmiCat.label}</p>
+          </div>
+          <div style={{ borderRadius: '16px', padding: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.14em' }}>Weight Gap</p>
+            <p style={{ fontSize: '24px', fontWeight: 900, color: goalDelta === null ? 'white' : goalDelta > 0 ? '#d4ff00' : '#00d9ff', marginTop: '8px' }}>
+              {goalDelta === null ? '--' : `${goalDelta > 0 ? '-' : '+'}${Math.abs(goalDelta)}`}
+              <span style={{ fontSize: '12px', color: '#8a8a8a', marginLeft: '4px' }}>kg</span>
+            </p>
+            <p style={{ fontSize: '10px', color: '#8a8a8a', marginTop: '4px' }}>From current to goal</p>
+          </div>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
           <div style={{ position: 'relative' }}>
             <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>DISPLAY NAME</label>
@@ -207,12 +348,23 @@ export default function SettingsPage() {
              <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>ACTUAL WEIGHT</label>
              <Scale size={16} color="#00d9ff" style={{ position: 'absolute', left: '16px', bottom: '16px' }} />
              <input
-               id="actual-weight" type="number" value={actualWeight || ''}
-               onChange={e => setActualWeight(parseFloat(e.target.value))}
+               id="actual-weight" type="number" value={actualWeight ?? ''}
+               onChange={e => setActualWeight(e.target.value ? parseFloat(e.target.value) : null)}
                placeholder="Current"
                style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(0,217,255,0.2)', background: 'rgba(0,217,255,0.03)', color: 'white', boxSizing: 'border-box' }}
              />
              <span style={{ position: 'absolute', right: '16px', bottom: '16px', fontSize: '10px', fontWeight: 900, color: '#00d9ff' }}>KG</span>
+          </div>
+          <div style={{ position: 'relative' }}>
+             <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>GOAL WEIGHT</label>
+             <TargetIcon size={16} color="#d4ff00" style={{ position: 'absolute', left: '16px', bottom: '16px' }} />
+             <input
+               id="goal-weight" type="number" value={goalWeight}
+               onChange={e => setGoalWeight(e.target.value)}
+               placeholder="Goal"
+               style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(212,255,0,0.2)', background: 'rgba(212,255,0,0.03)', color: 'white', boxSizing: 'border-box' }}
+             />
+             <span style={{ position: 'absolute', right: '16px', bottom: '16px', fontSize: '10px', fontWeight: 900, color: '#d4ff00' }}>KG</span>
           </div>
           <div style={{ position: 'relative' }}>
              <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>HEIGHT</label>
@@ -225,74 +377,39 @@ export default function SettingsPage() {
              />
              <span style={{ position: 'absolute', right: '16px', bottom: '16px', fontSize: '10px', fontWeight: 900, color: '#5a5a5a' }}>CM</span>
           </div>
-          <div style={{ background: 'rgba(212,255,0,0.02)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(212,255,0,0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ fontSize: '9px', fontWeight: 900, color: '#5a5a5a', letterSpacing: '0.1em' }}>BIO-METRIC BMI</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span style={{ fontSize: '24px', fontWeight: 900, color: bmiCat.color }}>{bmiValue}</span>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: bmiCat.color, textTransform: 'uppercase' }}>{bmiCat.label}</span>
-            </div>
-          </div>
         </div>
         
         <button onClick={handleSaveName} disabled={savingName}
           style={{ width: '100%', height: '52px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '13px', fontWeight: 900, textTransform: 'uppercase', boxShadow: '0 4px 15px rgba(212,255,0,0.3)', marginTop: '8px' }}>
-          {savingName ? <Loader2 size={16} className="animate-spin" /> : <><Save size={18} /> Update Bio-Status</>}
+          {savingName ? <Loader2 size={16} className="animate-spin" /> : <><Save size={18} /> Save Profile</>}
         </button>
       </div>
 
-      {/* ── Ambitious Goals ── */}
-      <p style={S.label}>Goal Calibration</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '8px' }}>
-           <div style={{ ...S.card, position: 'relative', margin: 0 }}>
-              <label style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a', marginBottom: '8px', display: 'block' }}>TARGET WEIGHT</label>
-              <TargetIcon size={16} color="#d4ff00" style={{ position: 'absolute', left: '16px', bottom: '16px' }} />
-              <input
-                id="goal-weight" type="number" value={goalWeight}
-                onChange={e => setGoalWeight(e.target.value)}
-                placeholder="Target"
-                style={{ width: '100%', borderRadius: '16px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 700, outline: 'none', border: '1px solid rgba(212,255,0,0.2)', background: 'rgba(212,255,0,0.03)', color: 'white', boxSizing: 'border-box' }}
-              />
-              <span style={{ position: 'absolute', right: '16px', bottom: '16px', fontSize: '10px', fontWeight: 900, color: '#d4ff00' }}>KG</span>
-           </div>
-           
-           <div style={{ ...S.card, display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(212,255,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Scale size={20} color="#d4ff00" />
-              </div>
-              <div>
-                <p style={{ fontSize: '14px', fontWeight: 900, color: 'white' }}>{goalWeight || '--'} kg</p>
-                <p style={{ fontSize: '10px', color: '#8a8a8a', fontWeight: 800 }}>Aspiration</p>
-              </div>
-           </div>
-      </div>
-
-      {/* ── Measurements ── */}
-      <p style={S.label}>Analytics Depth</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-        <button onClick={() => router.push('/weight')}
-          style={{ ...S.card, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(212,255,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Scale size={24} color="#d4ff00" />
-          </div>
-          <div>
-            <h4 style={{ fontSize: '16px', fontWeight: 800 }}>Body Weight Engine</h4>
-            <p style={{ fontSize: '12px', color: '#8a8a8a', marginTop: '2px' }}>Manage daily weigh-ins and physiological trends</p>
-          </div>
-        </button>
-      </div>
-
-      {/* ── Nutrition Goals ── */}
-      <p style={{ ...S.label, marginTop: '32px' }}>Nutrition targets (Daily)</p>
+      <p style={{ ...S.label, marginTop: '32px' }}>Daily Goals</p>
       {loading ? (
         <div style={{ ...S.card, height: 200, opacity: 0.3 }} />
       ) : (
         <div style={S.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '18px', flexWrap: 'wrap' }}>
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 800, color: 'white' }}>Daily goals</p>
+              <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '4px' }}>
+                {activeTarget?.effective_from ? `Active since ${new Date(activeTarget.effective_from).toLocaleDateString()}` : 'No saved target yet'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+              <button onClick={() => applyPreset('fat_loss')} style={{ padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'white', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Fat loss</button>
+              <button onClick={() => applyPreset('maintain')} style={{ padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'white', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Maintain</button>
+              <button onClick={() => applyPreset('muscle_gain')} style={{ padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'white', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Muscle gain</button>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '24px' }}>
             <Field id="set-cal"   label="Calories" value={form.calories_target}  onChange={v => setForm(f => ({ ...f, calories_target: v }))}  suffix="kcal" />
             <Field id="set-prot"  label="Protein"  value={form.protein_target_g} onChange={v => setForm(f => ({ ...f, protein_target_g: v }))} suffix="g" />
             <Field id="set-carbs" label="Carbs"    value={form.carbs_target_g}   onChange={v => setForm(f => ({ ...f, carbs_target_g: v }))}   suffix="g" />
             <Field id="set-fat"   label="Fat"      value={form.fat_target_g}     onChange={v => setForm(f => ({ ...f, fat_target_g: v }))}     suffix="g" />
-            <Field id="set-water" label="Hydration" value={form.water_target_ml} onChange={v => setForm(f => ({ ...f, water_target_ml: v }))} suffix="ml" />
+            <Field id="set-water" label="Water" value={form.water_target_ml} onChange={v => setForm(f => ({ ...f, water_target_ml: v }))} suffix="ml" />
           </div>
           <button id="save-settings-btn" onClick={handleSave} disabled={saving}
             style={{
@@ -304,12 +421,68 @@ export default function SettingsPage() {
               boxShadow: success ? '0 8px 30px rgba(212,255,0,0.4)' : 'none',
               border: success ? 'none' : '1px solid rgba(212,255,0,0.2)'
             }}>
-            {saving ? <Loader2 size={16} className="animate-spin" /> : success ? 'Successfully Saved' : 'Save Goals'}
+            {saving ? <Loader2 size={16} className="animate-spin" /> : success ? 'Saved' : 'Save Goals'}
           </button>
         </div>
       )}
 
+      <p style={{ ...S.label, marginTop: '32px' }}>More</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginBottom: '32px' }}>
+        <button onClick={() => router.push('/templates')}
+          style={{ ...S.card, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(0,217,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BookOpen size={24} color="#00d9ff" />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '16px', fontWeight: 800 }}>Personal Library</h4>
+            <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>Manage your meal templates and staples</p>
+          </div>
+        </button>
 
+        <button onClick={() => router.push('/supplements')}
+          style={{ ...S.card, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer', background: 'rgba(212,255,0,0.02)', border: '1px solid rgba(212,255,0,0.05)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(212,255,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ZapIcon size={24} color="#d4ff00" />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '16px', fontWeight: 800 }}>Supplement Stack</h4>
+            <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>Set up your daily supplements</p>
+          </div>
+        </button>
+
+        <button onClick={() => router.push('/weight')}
+          style={{ ...S.card, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Scale size={24} color="white" />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '16px', fontWeight: 800 }}>Weight</h4>
+            <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>Track your weight and trend</p>
+          </div>
+        </button>
+
+        <button onClick={() => router.push('/workouts')}
+          style={{ ...S.card, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer', background: 'rgba(0,217,255,0.02)', border: '1px solid rgba(0,217,255,0.05)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(0,217,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Dumbbell size={24} color="#00d9ff" />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '16px', fontWeight: 800 }}>Workouts</h4>
+            <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>Open your session and recovery page</p>
+          </div>
+        </button>
+
+        <button onClick={() => router.push('/analytics')}
+          style={{ ...S.card, margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BarChart3 size={24} color="white" />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '16px', fontWeight: 800 }}>Insights</h4>
+            <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '2px' }}>See your food, water, weight, and workout trends</p>
+          </div>
+        </button>
+      </div>
 
       {/* ── Sign Out ── */}
       <div style={{ marginTop: '32px' }}>

@@ -4,10 +4,60 @@ from supabase import Client
 
 from app.supabase_client import get_supabase
 from app.dependencies import get_current_user_id
-from app.schemas import OnboardingCreate, OnboardingResponse
+from app.schemas import OnboardingCreate, OnboardingResponse, ProfileCompositeResponse, TargetResponse, WeightResponse
 from app.utils.timezone import get_sydney_now, get_sydney_today_iso
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
+
+
+@router.get("/profile-composite", response_model=ProfileCompositeResponse)
+def get_profile_composite(
+    user_id: str = Depends(get_current_user_id),
+    supabase: Client = Depends(get_supabase),
+):
+    """
+    High-speed composite endpoint to fetch all profile-related data in a single round-trip.
+    Reduces latency on the Settings/Profile page significantly.
+    """
+    # 1. Fetch Profile
+    p_resp = supabase.table("profiles").select("*").eq("user_id", user_id).limit(1).execute()
+    profile = p_resp.data[0] if p_resp.data else {"user_id": user_id, "onboarding_completed": False}
+
+    # 2. Fetch Active Targets
+    t_resp = (
+        supabase.table("daily_targets")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("effective_from", desc=True)
+        .execute()
+    )
+    targets = t_resp.data or []
+
+    # 3. Fetch Recent Weights (Limit to last 30 for performance)
+    w_resp = (
+        supabase.table("weight_logs")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("date", desc=True)
+        .limit(30)
+        .execute()
+    )
+    weights = w_resp.data or []
+
+    # Extract current target for the profile response format
+    if targets:
+        t = targets[0] # Most recent
+        profile["calories_target"] = t.get("calories_target")
+        profile["protein_target_g"] = t.get("protein_target_g")
+        profile["carbs_target_g"] = t.get("carbs_target_g")
+        profile["fat_target_g"] = t.get("fat_target_g")
+        profile["water_target_ml"] = t.get("water_target_ml") or 2500
+
+    return {
+        "profile": profile,
+        "targets": targets,
+        "weights": weights
+    }
 
 
 @router.get("", response_model=OnboardingResponse)
@@ -100,6 +150,8 @@ def complete_onboarding(
         .limit(1)
         .execute()
     )
+    if not resp.data:
+        raise HTTPException(status_code=500, detail="Failed to retrieve profile after onboarding")
     return resp.data[0]
 
 
@@ -127,19 +179,12 @@ def update_onboarding(
         "updated_at":   now,
     }
 
-    print(f"DEBUG: Updating profile for user {user_id}")
-    print(f"DEBUG: Payload: {data}")
-
     if not existing.data:
-        print("DEBUG: Profile missing - performing INSERT")
         data["onboarding_completed"] = True
         data["created_at"] = now
         res = supabase.table("profiles").insert(data).execute()
-        print(f"DEBUG: Insert result: {res.data}")
     else:
-        print("DEBUG: Profile exists - performing UPDATE")
         res = supabase.table("profiles").update(data).eq("user_id", user_id).execute()
-        print(f"DEBUG: Update result: {res.data}")
 
     resp = (
         supabase.table("profiles")
@@ -148,4 +193,6 @@ def update_onboarding(
         .limit(1)
         .execute()
     )
+    if not resp.data:
+        raise HTTPException(status_code=500, detail="Failed to retrieve updated profile")
     return resp.data[0]

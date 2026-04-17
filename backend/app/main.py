@@ -25,6 +25,8 @@ from app.routers import review as review_router
 from app.routers import weights as weights_router
 from app.routers import analytics as analytics_router
 from app.routers import water as water_router
+from app.routers import workouts as workouts_router
+from app.routers import supplements as supplements_router
 
 settings = get_settings()
 
@@ -35,22 +37,30 @@ app = FastAPI(
 )
 
 # CORS configuration
+has_wildcard = "*" in settings.cors_origins_list
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[o for o in settings.cors_origins_list if o != "*"] or ["http://localhost:3000"],
+    allow_credentials=not has_wildcard,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     import traceback
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Log full trace only to server logs (not to client)
     error_detail = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-    print(f"FATAL_ERROR: {error_detail}")
+    logger.error(f"FATAL_ERROR: {error_detail}")
+    
+    # Send minimal user-friendly response
+    detail = "An error occurred. Please try again later." if settings.app_env == "production" else str(exc)
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Internal Server Error: {str(exc)}", "trace": error_detail if settings.app_env == "development" else None},
+        content={"detail": detail},
         headers={"Access-Control-Allow-Origin": "*"} 
     )
 
@@ -64,6 +74,8 @@ app.include_router(review_router.router)
 app.include_router(weights_router.router)
 app.include_router(analytics_router.router)
 app.include_router(water_router.router)
+app.include_router(workouts_router.router)
+app.include_router(supplements_router.router)
 
 
 @app.get("/health")

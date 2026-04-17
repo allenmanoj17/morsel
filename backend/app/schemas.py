@@ -263,12 +263,9 @@ class MealTemplateResponse(BaseModel):
 
 # ─── Analytics & Review ───────────────────────────────────────────────────────
 
-class ReviewResponse(BaseModel):
-    day_complete: bool
-    targets_met: dict
-    anomalies: List[str]
-    summary: str
-
+class VolumeByCategory(BaseModel):
+    category: str
+    volume: float
 
 class AnalyticsWeeklyResponse(BaseModel):
     avg_calories: float
@@ -282,6 +279,7 @@ class AnalyticsWeeklyResponse(BaseModel):
     carbs_pct: Optional[float] = 0
     fat_pct: Optional[float] = 0
     avg_water_ml: Optional[float] = 0
+    total_workout_volume: float = 0.0
     # New Hero Metrics
     calories_hit_count: int = 0
     protein_hit_count: int = 0
@@ -289,6 +287,17 @@ class AnalyticsWeeklyResponse(BaseModel):
     avg_first_meal: Optional[str] = None # HH:MM
     avg_last_meal: Optional[str] = None # HH:MM
     meals_per_day_avg: float = 0.0
+    volume_by_category: List[VolumeByCategory] = []
+
+class StrengthTrend(BaseModel):
+    exercise_name: str
+    dates: List[date]
+    e1rm_values: List[float]
+
+class RecoveryStatus(BaseModel):
+    muscle_group: str
+    recovery_pct: float # 0 to 100
+    status: str # "Primed", "Recovering", "Fatigued"
 
 
 class AnalyticsTrendsResponse(BaseModel):
@@ -298,12 +307,17 @@ class AnalyticsTrendsResponse(BaseModel):
     water: List[float]
     weight: List[Optional[float]]
     adherence: List[Optional[float]]
+    workout_volume: List[float] = []
+    workout_intensity: List[float] = []
+    supplement_adherence: List[float] = []
     # Benchmarks
     calories_target: List[Optional[float]]
     protein_target: List[Optional[float]]
     water_target: List[Optional[float]]
     weight_rolling_avg: List[Optional[float]]
-
+    volume_by_category: List[VolumeByCategory] = []
+    strength_evolution: Optional[List[StrengthTrend]] = None
+    recovery_status: Optional[List[RecoveryStatus]] = None
 
 class AnalyticMealTypeDist(BaseModel):
     type: str
@@ -319,21 +333,15 @@ class AnalyticTimeDist(BaseModel):
 class AnalyticsMealStatsResponse(BaseModel):
     type_distribution: List[AnalyticMealTypeDist]
     time_distribution: List[AnalyticTimeDist]
+    frequent_items: List[dict] = []
 
+class ReviewResponse(BaseModel):
+    day_complete: bool
+    targets_met: dict
+    anomalies: List[str]
+    summary: str
 
-class SocialSummaryResponse(BaseModel):
-    date: date
-    day_number: int # Relative to start of tracking
-    calories_actual: float
-    calories_target: float
-    protein_actual: float
-    protein_target: float
-    water_actual: float
-    water_target: float
-    weight: Optional[float]
-    training_done: bool = False
-    adherence_score: float
-    summary_text: str
+# ─── Weights ──────────────────────────────────────────────────────────────────
 
 class WeightCreate(BaseModel):
     date: date
@@ -358,6 +366,32 @@ class WeightResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# ─── Composite Responses ─────────────────────────────────────────────────────
+
+class ProfileCompositeResponse(BaseModel):
+    profile: OnboardingResponse
+    targets: List[TargetResponse]
+    weights: List[WeightResponse]
+
+class AnalyticsCompositeResponse(BaseModel):
+    weekly: AnalyticsWeeklyResponse
+    trends: AnalyticsTrendsResponse
+    stats: AnalyticsMealStatsResponse
+    social: Optional["SocialSummaryResponse"] = None
+
+class SocialSummaryResponse(BaseModel):
+    date: date
+    day_number: int # Relative to start of tracking
+    calories_actual: float
+    calories_target: float
+    protein_actual: float
+    protein_target: float
+    water_actual: float
+    water_target: float
+    weight: Optional[float]
+    training_done: bool = False
+    adherence_score: float
+    summary_text: str
 
 # ─── Water ────────────────────────────────────────────────────────────────────
 
@@ -375,6 +409,91 @@ class WaterLogResponse(BaseModel):
     user_id: UUID
     date: date
     amount_ml: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ─── Exercises ──────────────────────────────────────────────────────────────
+class ExerciseCreate(BaseModel):
+    name: str
+    category: Optional[str] = "Uncategorized"
+    equipment: Optional[str] = "None"
+    muscle_group_primary: Optional[str] = None
+    muscle_group_secondary: Optional[str] = None
+    base_recovery_hours: Optional[int] = 48
+    detail: Optional[str] = None
+    youtube_url: Optional[str] = None
+
+class ExerciseResponse(BaseModel):
+    id: UUID
+    user_id: Optional[UUID]
+    name: str
+    category: Optional[str]
+    equipment: Optional[str]
+    muscle_group_primary: Optional[str]
+    muscle_group_secondary: Optional[str]
+    base_recovery_hours: Optional[int]
+    detail: Optional[str]
+    youtube_url: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ─── Workouts ───────────────────────────────────────────────────────────────
+class WorkoutSetBase(BaseModel):
+    exercise_name: str
+    set_index: int
+    reps: int
+    weight: float
+
+class WorkoutSessionCreate(BaseModel):
+    session_date: date
+    notes: Optional[str] = None
+    sets: List[WorkoutSetBase]
+
+class WorkoutSessionResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    session_date: date
+    total_volume: float
+    notes: Optional[str]
+    sets: List[WorkoutSetBase] = []
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ─── Supplements ────────────────────────────────────────────────────────────
+class SupplementCreate(BaseModel):
+    name: str
+    dosage: Optional[str] = None
+    is_active: bool = True
+
+class SupplementResponse(BaseModel):
+    id: UUID
+    name: str
+    dosage: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class SupplementLogCreate(BaseModel):
+    date: date
+    supplement_id: UUID
+    taken: bool = False
+
+class SupplementLogResponse(BaseModel):
+    id: UUID
+    date: date
+    supplement_id: UUID
+    taken: bool
     created_at: datetime
 
     class Config:

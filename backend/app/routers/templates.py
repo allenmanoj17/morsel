@@ -25,6 +25,7 @@ def get_templates(
         .select("*")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
+        .limit(200)  # Pagination limit
         .execute()
     )
     return resp.data or []
@@ -109,7 +110,7 @@ def delete_template(
     )
     if not existing.data:
         raise HTTPException(status_code=404, detail="Template not found")
-    supabase.table("meal_templates").delete().eq("id", template_id).execute()
+    supabase.table("meal_templates").delete().eq("id", template_id).eq("user_id", user_id).execute()
 
 
 @router.post("/{template_id}/log", response_model=MealEntryResponse, status_code=201)

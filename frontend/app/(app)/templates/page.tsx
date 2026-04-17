@@ -123,7 +123,9 @@ export default function TemplatesPage() {
     if (cached) {
       try {
         setTemplates(JSON.parse(cached))
-      } catch (e) {}
+      } catch (e: any) {
+        console.error('Failed to parse templates cache:', e)
+      }
     }
 
     try {
@@ -164,7 +166,7 @@ export default function TemplatesPage() {
   }
 
   const S = {
-    container: { maxWidth: '540px', margin: '0 auto', padding: '40px 20px 120px', minHeight: '100dvh', background: '#030409', color: 'white' } as React.CSSProperties,
+    container: { width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '24px 16px 140px', minHeight: '100dvh', background: '#030409', color: 'white', boxSizing: 'border-box' } as React.CSSProperties,
     card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '12px' } as React.CSSProperties
   }
@@ -231,18 +233,32 @@ export default function TemplatesPage() {
                 ))}
               </div>
 
-              <button onClick={() => handleLog(tpl.id)}
-                style={{
-                  width: '100%', padding: '16px', borderRadius: '14px', border: 'none',
-                  background: '#d4ff00', color: '#030409', fontWeight: 900, fontSize: '12px',
-                  textTransform: 'uppercase', letterSpacing: '0.12em', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                  transition: 'all 0.1s ease', boxShadow: '0 8px 16px rgba(212,255,0,0.1)'
-                }}
-              >
-                <Play size={16} fill="currentColor" strokeWidth={0} />
-                Log this meal
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <button onClick={() => handleLog(tpl.id)}
+                  style={{
+                    padding: '16px', borderRadius: '14px', border: 'none',
+                    background: '#d4ff00', color: '#030409', fontWeight: 900, fontSize: '12px',
+                    textTransform: 'uppercase', letterSpacing: '0.12em', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    transition: 'all 0.1s ease', boxShadow: '0 8px 16px rgba(212,255,0,0.1)'
+                  }}
+                >
+                  <Play size={16} fill="currentColor" strokeWidth={0} />
+                  Log meal
+                </button>
+                <button onClick={() => setShowModal(tpl)}
+                  style={{
+                    padding: '16px', borderRadius: '14px', border: '1px solid #d4ff00', 
+                    background: 'transparent', color: '#d4ff00', fontWeight: 900, fontSize: '12px',
+                    textTransform: 'uppercase', letterSpacing: '0.12em', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    transition: 'all 0.1s ease'
+                  }}
+                >
+                  <Edit3 size={16} />
+                  Edit
+                </button>
+              </div>
             </div>
           ))}
         </div>

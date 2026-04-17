@@ -232,7 +232,89 @@ create policy "own weight logs"     on public.weight_logs    for all using (auth
 drop policy if exists "own parse audits" on public.parse_audit;
 create policy "own parse audits"   on public.parse_audit    for all using (auth.uid() = user_id);
 
--- ─── water_logs ─────────────────────────────────────────────────────────────
+
+-- ─── exercises ─────────────────────────────────────────────────────────────
+create table if not exists public.exercises (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid references auth.users(id) on delete cascade, -- can be null for 'global' ones
+  name          text not null,
+  category      text default 'Uncategorized',
+  equipment     text default 'None',
+  muscle_group_primary   text,
+  muscle_group_secondary text,
+  base_recovery_hours    integer default 48,
+  detail        text,
+  youtube_url   text,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+alter table public.exercises enable row level security;
+drop policy if exists "own or global exercises" on public.exercises;
+create policy "own or global exercises" on public.exercises for all using (auth.uid() = user_id or user_id is null);
+
+-- ─── workout_sessions ───────────────────────────────────────────────────────
+create table if not exists public.workout_sessions (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  session_date  date not null,
+  total_volume  numeric(10,2) default 0,
+  notes         text,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+alter table public.workout_sessions enable row level security;
+drop policy if exists "own workouts" on public.workout_sessions;
+create policy "own workouts" on public.workout_sessions for all using (auth.uid() = user_id);
+
+-- ─── workout_sets ──────────────────────────────────────────────────────────
+create table if not exists public.workout_sets (
+  id            uuid primary key default uuid_generate_v4(),
+  session_id    uuid not null references public.workout_sessions(id) on delete cascade,
+  exercise_name text not null,
+  set_index     integer not null,
+  reps          integer not null,
+  weight        numeric(8,2) not null,
+  created_at    timestamptz default now()
+);
+alter table public.workout_sets enable row level security;
+drop policy if exists "own workout sets" on public.workout_sets;
+create policy "own workout sets" on public.workout_sets for all using (
+  exists (select 1 from public.workout_sessions s where s.id = session_id and s.user_id = auth.uid())
+);
+
+-- ─── supplement_stack ───────────────────────────────────────────────────────
+create table if not exists public.supplement_stack (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  name          text not null,
+  dosage        text,
+  is_active     boolean not null default true,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+alter table public.supplement_stack enable row level security;
+drop policy if exists "own supplement stack" on public.supplement_stack;
+create policy "own supplement stack" on public.supplement_stack for all using (auth.uid() = user_id);
+
+-- ─── supplement_logs ────────────────────────────────────────────────────────
+create table if not exists public.supplement_logs (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  date          date not null,
+  supplement_id uuid not null references public.supplement_stack(id) on delete cascade,
+  taken         boolean not null default false,
+  created_at    timestamptz default now(),
+  unique(user_id, date, supplement_id)
+);
+alter table public.supplement_logs enable row level security;
+drop policy if exists "own supplement logs" on public.supplement_logs;
+create policy "own supplement logs" on public.supplement_logs for all using (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════════════════════════════
+-- missing app tables and policy fixes
+-- ═══════════════════════════════════════════════════════════════════
+
+-- water_logs is used by the app for hydration, dashboard, and analytics
 create table if not exists public.water_logs (
   id            uuid primary key default uuid_generate_v4(),
   user_id       uuid not null references auth.users(id) on delete cascade,
@@ -243,12 +325,121 @@ create table if not exists public.water_logs (
   unique(user_id, date)
 );
 
+alter table public.water_logs enable row level security;
+
 drop trigger if exists trg_water_logs_updated_at on public.water_logs;
 create trigger trg_water_logs_updated_at
   before update on public.water_logs
   for each row execute function public.update_updated_at_column();
 
-alter table public.water_logs enable row level security;
+drop trigger if exists trg_exercises_updated_at on public.exercises;
+create trigger trg_exercises_updated_at
+  before update on public.exercises
+  for each row execute function public.update_updated_at_column();
+
+drop trigger if exists trg_workout_sessions_updated_at on public.workout_sessions;
+create trigger trg_workout_sessions_updated_at
+  before update on public.workout_sessions
+  for each row execute function public.update_updated_at_column();
+
+drop trigger if exists trg_supplement_stack_updated_at on public.supplement_stack;
+create trigger trg_supplement_stack_updated_at
+  before update on public.supplement_stack
+  for each row execute function public.update_updated_at_column();
 
 drop policy if exists "own water logs" on public.water_logs;
-create policy "own water logs" on public.water_logs for all using (auth.uid() = user_id);
+create policy "own water logs" on public.water_logs
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Recreate these with explicit WITH CHECK so inserts and upserts work correctly
+drop policy if exists "own profiles" on public.profiles;
+create policy "own profiles" on public.profiles
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own targets" on public.daily_targets;
+create policy "own targets" on public.daily_targets
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own food items" on public.food_items;
+create policy "own food items" on public.food_items
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own templates" on public.meal_templates;
+create policy "own templates" on public.meal_templates
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own meals" on public.meal_entries;
+create policy "own meals" on public.meal_entries
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own rollups" on public.daily_rollups;
+create policy "own rollups" on public.daily_rollups
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own weight logs" on public.weight_logs;
+create policy "own weight logs" on public.weight_logs
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own parse audits" on public.parse_audit;
+create policy "own parse audits" on public.parse_audit
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own or global exercises" on public.exercises;
+create policy "own or global exercises" on public.exercises
+  for all
+  using (auth.uid() = user_id or user_id is null)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own workouts" on public.workout_sessions;
+create policy "own workouts" on public.workout_sessions
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own workout sets" on public.workout_sets;
+create policy "own workout sets" on public.workout_sets
+  for all
+  using (
+    exists (
+      select 1
+      from public.workout_sessions s
+      where s.id = session_id and s.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.workout_sessions s
+      where s.id = session_id and s.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "own supplement stack" on public.supplement_stack;
+create policy "own supplement stack" on public.supplement_stack
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "own supplement logs" on public.supplement_logs;
+create policy "own supplement logs" on public.supplement_logs
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

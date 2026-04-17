@@ -61,4 +61,6 @@ def update_food(
         .eq("id", food_id)
         .execute()
     )
+    if not resp.data:
+        raise HTTPException(status_code=500, detail="Failed to update food item")
     return resp.data[0]

@@ -11,7 +11,6 @@ export default function WeightPage() {
   const [weights, setWeights] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState('')
-  const [showForm, setShowForm] = useState(false)
   const [wVal, setWVal] = useState('')
   const [wDate, setWDate] = useState(new Date().toISOString().substring(0, 10))
   const [saving, setSaving] = useState(false)
@@ -44,7 +43,8 @@ export default function WeightPage() {
     setSaving(true)
     try {
       await api.createWeight({ date: wDate, weight_value: val, unit: 'kg' }, token)
-      setShowForm(false); setWVal(''); loadData(token)
+      setWVal('')
+      loadData(token)
     } catch (e: any) { alert(e.message) }
     finally { setSaving(false) }
   }
@@ -63,18 +63,18 @@ export default function WeightPage() {
   
   const getBMICategory = (val: number | null) => {
     if (val === null) return { label: null, color: '#8a8a8a' }
-    if (val < 18.5) return { label: 'Underweight', color: '#00d9ff' }
-    if (val < 25) return { label: 'Healthy Range', color: '#d4ff00' }
-    if (val < 30) return { label: 'Overweight', color: '#ffa500' }
-    return { label: 'Obese', color: '#ff2d55' }
+    if (val < 18.5) return { label: 'Low', color: '#00d9ff' }
+    if (val < 25) return { label: 'Healthy', color: '#d4ff00' }
+    if (val < 30) return { label: 'High', color: '#ffa500' }
+    return { label: 'Very high', color: '#ff2d55' }
   }
   const bmiCat = getBMICategory(bmi)
 
   const TOOLTIP_STYLE = { backgroundColor: '#030409', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 800, color: 'white' }
 
   const S = {
-    container: { width: '100%', maxWidth: '480px', margin: '0 auto', padding: '24px 16px 120px', minHeight: '100dvh', background: '#030409', color: 'white', display: 'flex', flexDirection: 'column' as const, boxSizing: 'border-box' } as React.CSSProperties,
-    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px', marginBottom: '16px', width: '100%', boxSizing: 'border-box' } as React.CSSProperties,
+    container: { width: '100%', maxWidth: '480px', margin: '0 auto', padding: 'clamp(18px, 4vw, 24px) clamp(14px, 3.5vw, 16px) clamp(104px, 22vw, 120px)', minHeight: '100dvh', background: '#030409', color: 'white', display: 'flex', flexDirection: 'column' as const, boxSizing: 'border-box' } as React.CSSProperties,
+    card: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: 'clamp(16px, 4vw, 24px)', marginBottom: 'clamp(12px, 3vw, 16px)', width: '100%', boxSizing: 'border-box' } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '10px' } as React.CSSProperties
   }
 
@@ -88,7 +88,7 @@ export default function WeightPage() {
         </button>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.04em' }}>Weight</h1>
-          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px' }}>Keep track of your progress ✨</p>
+          <p style={{ fontSize: '13px', color: '#8a8a8a', marginTop: '4px' }}>Track your weight over time</p>
         </div>
       </div>
 
@@ -124,7 +124,7 @@ export default function WeightPage() {
                     <p style={{ fontSize: '11px', fontWeight: 800, color: bmiCat.color, marginTop: '2px' }}>{bmiCat.label}</p>
                   </>
                 ) : (
-                  <p style={{ fontSize: '11px', color: '#5a5a5a', fontWeight: 800 }}>Complete profile to see BMI</p>
+                  <p style={{ fontSize: '11px', color: '#5a5a5a', fontWeight: 800 }}>Add your height to see BMI</p>
                 )}
               </div>
             </div>
@@ -154,13 +154,21 @@ export default function WeightPage() {
 
           {/* ── Add Card ── */}
           <div style={{ ...S.card, background: 'rgba(212,255,0,0.03)', border: '1px solid rgba(212,255,0,0.1)' }}>
-             <p style={{ ...S.label, color: '#d4ff00' }}>New Entry</p>
-             <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+             <p style={{ ...S.label, color: '#d4ff00' }}>Add Weight</p>
+             <div style={{ display: 'flex', gap: '12px', marginTop: '12px', marginBottom: '12px' }}>
+                <input
+                  type="date"
+                  value={wDate}
+                  onChange={e => setWDate(e.target.value)}
+                  style={{ border: 'none', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', padding: '16px', fontSize: '14px', fontWeight: 700, color: 'white', outline: 'none' }}
+                />
+             </div>
+             <div style={{ display: 'flex', gap: '12px' }}>
                 <input type="number" step="0.1" value={wVal} onChange={e => setWVal(e.target.value)} placeholder="00.0" 
                   style={{ flex: 1, border: 'none', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', padding: '16px', fontSize: '20px', fontWeight: 900, color: 'white', outline: 'none' }} />
                 <button onClick={handleSave} disabled={saving}
                   style={{ background: '#d4ff00', color: '#030409', borderRadius: '14px', padding: '0 24px', border: 'none', fontWeight: 900, fontSize: '13px', cursor: 'pointer' }}>
-                  {saving ? <Loader2 size={20} className="animate-spin" /> : 'Log Weight'}
+                  {saving ? <Loader2 size={20} className="animate-spin" /> : 'Save'}
                 </button>
              </div>
           </div>
@@ -168,20 +176,26 @@ export default function WeightPage() {
           {/* ── History ── */}
           <div style={{ marginTop: '16px' }}>
             <p style={S.label}>History</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {weights.map(w => (
-                <div key={w.id} style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', marginBottom: 0 }}>
-                  <div>
-                    <span style={{ fontSize: '18px', fontWeight: 900 }}>{w.weight_value}</span>
-                    <span style={{ fontSize: '10px', color: '#8a8a8a', marginLeft: '6px', fontWeight: 800 }}>KG</span>
-                    <p style={{ fontSize: '10px', color: '#5a5a5a', fontWeight: 800, marginTop: '2px' }}>{new Date(w.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+            {weights.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {weights.map(w => (
+                  <div key={w.id} style={{ ...S.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', marginBottom: 0 }}>
+                    <div>
+                      <span style={{ fontSize: '18px', fontWeight: 900 }}>{w.weight_value}</span>
+                      <span style={{ fontSize: '10px', color: '#8a8a8a', marginLeft: '6px', fontWeight: 800 }}>KG</span>
+                      <p style={{ fontSize: '10px', color: '#5a5a5a', fontWeight: 800, marginTop: '2px' }}>{new Date(w.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                    </div>
+                    <button onClick={() => handleDelete(w.id)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,45,85,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Trash2 size={16} color="#ff2d55" />
+                    </button>
                   </div>
-                  <button onClick={() => handleDelete(w.id)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,45,85,0.05)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Trash2 size={16} color="#ff2d55" />
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ ...S.card, textAlign: 'center', color: '#8a8a8a' }}>
+                No weight entries yet.
+              </div>
+            )}
           </div>
         </>
       )}
