@@ -26,7 +26,7 @@ def get_weights(
 
 @router.get("/latest", response_model=Optional[WeightLatestResponse])
 def get_latest_weight(
-    date: str | None = None,
+    date: Optional[str] = None,
     user_id: str = Depends(get_current_user_id),
     supabase: Client = Depends(get_supabase),
 ):
