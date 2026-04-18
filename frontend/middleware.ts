@@ -1,12 +1,22 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getSupabaseServerEnv } from '@/lib/supabase/env'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+  const env = getSupabaseServerEnv()
+  const { pathname } = request.nextUrl
+
+  if (!env) {
+    if (pathname === '/login') {
+      return supabaseResponse
+    }
+    return NextResponse.redirect(new URL('/login?error=missing-supabase-env', request.url))
+  }
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.url,
+    env.anonKey,
     {
       cookies: {
         getAll() {
@@ -26,8 +36,6 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
 
   // Public routes
   const publicRoutes = ['/login']

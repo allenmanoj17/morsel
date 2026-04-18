@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
-import { getLocalDateString } from '@/lib/utils'
-import { X, Loader2, Sparkles, CheckCircle2, Edit3, Clock, Calendar, Plus, Dumbbell, Utensils, Trash2, Bookmark, ChevronRight } from 'lucide-react'
+import { getLocalDateString, localDateTimeToUtcIso } from '@/lib/utils'
+import { X, Loader2, Sparkles, CheckCircle2, Edit3, Clock, Calendar, Plus, Dumbbell, Utensils, Trash2, Bookmark, ChevronDown } from 'lucide-react'
 
 interface ParsedResult {
   meal_name: string
@@ -130,13 +130,13 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
     if (!parsed) return
     setSaving(true)
     try {
-      const [h, m] = selectedTime.split(':')
-      const loggedAt = `${selectedDate}T${h}:${m}:00`
+      const loggedAt = localDateTimeToUtcIso(selectedDate, selectedTime)
 
       const mealBody = {
         meal_name: editing ? editVals.meal_name : parsed.meal_name,
         entry_text_raw: text,
         logged_at: loggedAt,
+        meal_date: selectedDate,
         calories: editing ? editVals.calories : parsed.total_calories,
         protein_g: editing ? editVals.protein_g : parsed.total_protein_g,
         carbs_g: editing ? editVals.carbs_g : parsed.total_carbs_g,
@@ -201,9 +201,30 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
     setSets(prev => prev.map((s, i) => i === idx ? { ...s, [key]: val } : s))
   }
 
+  const addFoodOption = (food: any) => {
+    const nextValue = food?.canonical_name?.trim()
+    if (!nextValue) return
+
+    const current = text.trim()
+    if (!current) {
+      setText(nextValue)
+      return
+    }
+
+    const existingItems = current
+      .split(';')
+      .map((part) => part.trim().toLowerCase())
+      .filter(Boolean)
+
+    if (existingItems.includes(nextValue.toLowerCase())) return
+
+    const joiner = current.endsWith(';') ? ' ' : '; '
+    setText(`${current}${joiner}${nextValue}`)
+  }
+
   const S = {
-    overlay: { position: 'fixed', inset: 0, background: 'rgba(3, 4, 9, 0.85)', backdropFilter: 'blur(24px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '16px' } as React.CSSProperties,
-    sheet: { width: '100%', maxWidth: 'min(440px, calc(100vw - 32px))', maxHeight: '85dvh', overflowY: 'auto' as const, background: 'var(--background)', borderRadius: '32px 32px 0 0', border: '1px solid var(--glass-border)', padding: '32px 24px 44px', boxShadow: '0 -20px 60px rgba(0,0,0,0.8)', scrollbarWidth: 'none' as const } as React.CSSProperties,
+    overlay: { position: 'fixed', inset: 0, background: 'rgba(3, 4, 9, 0.85)', backdropFilter: 'blur(24px)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 'clamp(8px, 3vw, 16px)' } as React.CSSProperties,
+    sheet: { width: '100%', maxWidth: 'min(440px, calc(100vw - 16px))', maxHeight: '85dvh', overflowY: 'auto' as const, background: 'var(--background)', borderRadius: '32px 32px 0 0', border: '1px solid var(--glass-border)', padding: 'clamp(20px, 5vw, 32px) clamp(16px, 4.5vw, 24px) clamp(28px, 8vw, 44px)', boxShadow: '0 -20px 60px rgba(0,0,0,0.8)', scrollbarWidth: 'none' as const } as React.CSSProperties,
     label: { fontSize: '10px', fontWeight: 900, color: '#8a8a8a', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: '8px', display: 'block' } as React.CSSProperties,
     input: { width: '100%', background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--input-radius)', padding: '18px', fontSize: '16px', fontWeight: 700, color: 'white', outline: 'none' } as React.CSSProperties,
     btnMain: { width: '100%', background: mode === 'meal' ? 'var(--accent)' : '#00d9ff', color: '#030409', borderRadius: '16px', padding: '20px', fontSize: '15px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: `0 8px 32px ${mode === 'meal' ? 'rgba(212,255,0,0.3)' : 'rgba(0,217,255,0.3)'}`, marginTop: '8px' } as React.CSSProperties,
@@ -215,8 +236,8 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
       <div style={S.sheet} className="animate-in slide-in-from-bottom-5 duration-300">
         
         {/* Header & Mode Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '18px', flex: 1, marginRight: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '18px', flex: 1, minWidth: 0 }}>
              <button onClick={() => { setMode('meal'); setText(''); setParsed(null); setSelectedExercise(null); }} style={S.modeBtn(mode === 'meal')}>
                 <Utensils size={14} /> Nutrition
              </button>
@@ -233,8 +254,8 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
         </div>
 
         {/* Global Date & Time */}
-        <div style={{ marginBottom: '24px', display: 'flex', gap: '12px' }}>
-           <div style={{ flex: 1.5 }}>
+        <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: mode === 'meal' ? 'minmax(0, 1.4fr) minmax(0, 1fr)' : 'minmax(0, 1fr)', gap: '12px' }}>
+           <div style={{ minWidth: 0 }}>
               <label style={S.label}>Date</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                  <Calendar size={16} color="#8a8a8a" style={{ position: 'absolute', left: '14px' }} />
@@ -243,7 +264,7 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
               </div>
            </div>
            {mode === 'meal' && (
-             <div style={{ flex: 1 }}>
+             <div style={{ minWidth: 0 }}>
                 <label style={S.label}>Time</label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                    <Clock size={16} color="#8a8a8a" style={{ position: 'absolute', left: '14px' }} />
@@ -257,29 +278,17 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
         {mode === 'meal' ? (
           /* ── Nutrition Mode ── */
           <>
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <label style={S.label}>Meal Type</label>
-              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {['breakfast', 'lunch', 'dinner', 'snacks', 'pre-workout', 'post-workout'].map(t => (
                   <button key={t} onClick={() => setMealType(t)}
-                    style={{ flexShrink: 0, padding: '10px 16px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', background: mealType === t ? 'var(--accent)' : 'rgba(255,255,255,0.03)', color: mealType === t ? '#030409' : '#8a8a8a', border: 'none', transition: 'all 0.2s ease' }}>
+                    style={{ flex: '1 1 calc(50% - 4px)', minWidth: '132px', padding: '10px 14px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', background: mealType === t ? 'var(--accent)' : 'rgba(255,255,255,0.03)', color: mealType === t ? '#030409' : '#8a8a8a', border: 'none', transition: 'all 0.2s ease' }}>
                     {t.replace('-', ' ')}
                   </button>
                 ))}
               </div>
             </div>
-
-            {!parsed && suggestions.length > 0 && (
-              <div style={{ marginBottom: '16px', background: '#0a0b10', border: '1px solid var(--glass-border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.35)' }}>
-                 {suggestions.slice(0, 5).map((food, index) => (
-                   <button key={food.id} onClick={() => { setText(food.canonical_name); setSuggestions([]); }}
-                    style={{ width: '100%', padding: '16px 20px', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: index === Math.min(suggestions.length, 5) - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)', color: 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
-                      <div><p style={{ fontSize: '14px', fontWeight: 800 }}>{food.canonical_name}</p><p style={{ fontSize: '10px', color: '#8a8a8a' }}>{Math.round(food.calories)} kcal • {Math.round(food.protein_g)}g protein</p></div>
-                      <Plus size={16} color="var(--accent)" />
-                   </button>
-                 ))}
-              </div>
-            )}
 
             <div style={{ marginBottom: '16px' }}>
               <label style={S.label}>What Did You Eat?</label>
@@ -288,6 +297,36 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
                 Use `;` to split foods on separate parts, like `eggs; toast; coffee`.
               </p>
             </div>
+
+            {!parsed && suggestions.length > 0 && (
+              <div style={{ marginBottom: '18px', padding: '14px', background: '#0a0b10', border: '1px solid var(--glass-border)', borderRadius: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.35)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+                  <div>
+                    <p style={{ ...S.label, marginBottom: '4px' }}>Food Options</p>
+                    <p style={{ fontSize: '11px', color: '#8a8a8a' }}>Tap an item to add it to the meal box.</p>
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 900, color: '#5a5a5a' }}>{Math.min(suggestions.length, 6)} shown</span>
+                </div>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {suggestions.slice(0, 6).map((food) => (
+                    <button
+                      key={food.id}
+                      onClick={() => addFoodOption(food)}
+                      style={{ width: '100%', padding: '14px 14px 14px 16px', textAlign: 'left', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: '14px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{food.canonical_name}</p>
+                        <p style={{ fontSize: '10px', color: '#8a8a8a', marginTop: '4px' }}>{Math.round(food.calories)} kcal • {Math.round(food.protein_g)}g protein</p>
+                      </div>
+                      <div style={{ flexShrink: 0, minWidth: '58px', padding: '8px 10px', borderRadius: '12px', background: 'rgba(212,255,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <Plus size={14} color="var(--accent)" />
+                        <span style={{ fontSize: '10px', fontWeight: 900, color: '#d4ff00', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Add</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {parsed && (
               <div style={{ background: 'rgba(212,255,0,0.04)', border: '1px solid rgba(212,255,0,0.2)', borderRadius: '20px', padding: '24px', marginBottom: '24px' }}>
@@ -364,16 +403,16 @@ export default function QuickAddModal({ token, initialDate, onClose, onSaved }: 
                           <Bookmark size={16} color={saveAsTemplate ? '#d4ff00' : '#8a8a8a'} />
                         </div>
                         <div style={{ textAlign: 'left' }}>
-                          <p style={{ fontSize: '13px', fontWeight: 800 }}>Make this a template</p>
-                          <p style={{ fontSize: '11px', color: '#8a8a8a' }}>Save it for quick logging later</p>
+                          <p style={{ fontSize: '13px', fontWeight: 800 }}>Add to templates</p>
+                          <p style={{ fontSize: '11px', color: '#8a8a8a' }}>Save this meal and choose a name or note</p>
                         </div>
                       </div>
-                      <ChevronRight size={16} color={saveAsTemplate ? '#d4ff00' : '#8a8a8a'} style={{ transform: saveAsTemplate ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                      <ChevronDown size={16} color={saveAsTemplate ? '#d4ff00' : '#8a8a8a'} style={{ transform: saveAsTemplate ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
                     </button>
                     {saveAsTemplate && (
                       <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
-                        <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Template name" style={{ ...S.input, padding: '14px 16px', fontSize: '14px' }} />
-                        <input value={templateDescription} onChange={e => setTemplateDescription(e.target.value)} placeholder="Short note (optional)" style={{ ...S.input, padding: '14px 16px', fontSize: '14px' }} />
+                        <input value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Choose a template name" style={{ ...S.input, padding: '14px 16px', fontSize: '14px' }} />
+                        <input value={templateDescription} onChange={e => setTemplateDescription(e.target.value)} placeholder="Add a short note if you want" style={{ ...S.input, padding: '14px 16px', fontSize: '14px' }} />
                       </div>
                     )}
                  </div>

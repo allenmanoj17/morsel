@@ -4,15 +4,14 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
-import { getLocalDateString } from '@/lib/utils'
-import { Plus, Loader2, Check, Zap, TrendingUp, ChevronRight, ChevronLeft, Droplets, Minus, Scale, BookOpen, CircleDashed } from 'lucide-react'
+import { addDaysToDateString, getLocalDateString } from '@/lib/utils'
+import { useCurrentDateString } from '@/lib/useCurrentDateString'
+import { Plus, Loader2, Check, Zap, TrendingUp, ChevronRight, ChevronLeft, Droplets, Minus, Scale, CircleDashed } from 'lucide-react'
 import QuickAddModal from '@/components/QuickAddModal'
 
 // ── Helpers ──
 function offsetDate(base: string, delta: number) {
-  const d = new Date(base + 'T12:00:00')
-  d.setDate(d.getDate() + delta)
-  return d.toISOString().split('T')[0]
+  return addDaysToDateString(base, delta)
 }
 
 function friendlyDate(iso: string) {
@@ -104,8 +103,9 @@ function DashboardContent() {
   const [degraded, setDegraded] = useState(false)
   const [degradedReason, setDegradedReason] = useState<string | null>(null)
 
-  const today = getLocalDateString()
-  const [selectedDate, setSelectedDate] = useState(today)
+  const liveToday = useCurrentDateString()
+  const [today, setToday] = useState(liveToday)
+  const [selectedDate, setSelectedDate] = useState(liveToday)
 
   const [review, setReview] = useState<any>(null)
   const [generatingReview, setGeneratingReview] = useState(false)
@@ -136,95 +136,52 @@ function DashboardContent() {
     try {
       setLoading(true)
       setError(null)
-      
-      const results = await Promise.allSettled([
-        api.getDailyDashboard(date, tok),
-        api.getSupplementStack(tok),
-        api.getSupplementLogs(date, tok),
-        api.getWorkoutSessions(tok),
-        api.getWeights(tok),
-        api.getTemplates(tok)
-      ])
-      
-      const [dashRes, stackRes, logsRes, workoutRes, weightsRes, templatesRes] = results
-      
-      // Track which services failed for partial degradation
-      let hasErrors = false
+      const data = await api.getHomeComposite(date, tok)
+      setDashboard(data.dashboard)
+      setRecentMeals(data.dashboard?.entries?.slice(0, 3) || [])
+      setWaterTotal(data.dashboard?.water?.consumed || 0)
+      localStorage.setItem(`morsel_dash_cache_${date}`, JSON.stringify(data.dashboard))
 
-      if (dashRes.status === 'fulfilled') {
-        const data = dashRes.value
-        setDashboard(data)
-        setRecentMeals(data.entries?.slice(0, 3) || [])
-        setWaterTotal(data.water?.consumed || 0)
-        localStorage.setItem(`morsel_dash_cache_${date}`, JSON.stringify(data))
-      } else {
-        hasErrors = true
-        console.error('Dashboard fetch failed:', dashRes.reason)
-        const cached = localStorage.getItem(`morsel_dash_cache_${date}`)
-        if (cached) {
-          setDegraded(true)
-          setDegradedReason('Showing cached nutrition data')
-          setDashboard(JSON.parse(cached))
-        }
-      }
-      
-      if (stackRes.status === 'fulfilled') {
-        const stack = stackRes.value
-        setSupps(stack.filter((s: any) => s.is_active).sort((a: any, b: any) => a.name.localeCompare(b.name)))
-      } else {
-        hasErrors = true
-        console.error('Supplement stack fetch failed:', stackRes.reason)
-      }
+      const stack = (data.supplements || [])
+        .filter((s: any) => s.is_active)
+        .sort((a: any, b: any) => a.name.localeCompare(b.name))
+      setSupps(stack)
 
-      if (logsRes.status === 'fulfilled') {
-        const logs = logsRes.value
-        const logMap: Record<string, boolean> = {}
-        logs.forEach((l: any) => { logMap[l.supplement_id] = l.taken })
-        setSuppLogs(logMap)
-      } else {
-        hasErrors = true
-        console.error('Supplement logs fetch failed:', logsRes.reason)
-      }
+      const logMap: Record<string, boolean> = {}
+      ;(data.supplement_logs || []).forEach((entry: any) => {
+        logMap[entry.supplement_id] = entry.taken
+      })
+      setSuppLogs(logMap)
 
-      if (workoutRes.status === 'fulfilled') {
-        const workoutSessions = workoutRes.value
-        const totalVolume = workoutSessions.reduce((acc: number, s: any) => acc + (s.total_volume || 0), 0)
-        setWorkoutSummary({
-          sessions: workoutSessions.length,
-          totalVolume,
-          lastSessionDate: workoutSessions[0]?.session_date
-        })
-      } else {
-        hasErrors = true
-        console.error('Workout sessions fetch failed:', workoutRes.reason)
-      }
-
-      if (weightsRes.status === 'fulfilled') {
-        const weightForDay = (weightsRes.value || []).find((w: any) => w.date === date)
-        const latest = weightForDay || (weightsRes.value || [])[0]
-        setLatestWeight(latest?.weight_value ?? null)
-      } else {
-        hasErrors = true
-        console.error('Weight fetch failed:', weightsRes.reason)
-      }
-
-      if (templatesRes.status === 'fulfilled') {
-        setQuickTemplates((templatesRes.value || []).slice(0, 4))
-      } else {
-        hasErrors = true
-        console.error('Template fetch failed:', templatesRes.reason)
-      }
-
-      if (hasErrors && !degraded) {
-        setDegraded(true)
-        setDegradedReason('Some data may be old or missing')
-      }
-
+      setWorkoutSummary({
+        sessions: data.workout_summary?.sessions || 0,
+        totalVolume: data.workout_summary?.total_volume || 0,
+        lastSessionDate: data.workout_summary?.last_session_date
+      })
+      setLatestWeight(data.latest_weight?.weight_value ?? null)
+      setQuickTemplates((data.quick_templates || []).slice(0, 4))
+      setDegraded(false)
+      setDegradedReason('')
       setReview(null)
     } catch (e: any) {
       console.error('DASHBOARD_FATAL_ERROR:', e)
       if (e.message?.includes('404')) router.push('/onboarding')
+      const cached = localStorage.getItem(`morsel_dash_cache_${date}`)
+      if (cached) {
+        try {
+          const fallback = JSON.parse(cached)
+          setDashboard(fallback)
+          setRecentMeals(fallback.entries?.slice(0, 3) || [])
+          setWaterTotal(fallback.water?.consumed || 0)
+          setDegraded(true)
+          setDegradedReason('Showing cached nutrition data')
+        } catch (cacheError) {
+          console.error('Failed to parse dashboard cache:', cacheError)
+          setError('Could not load your home data.')
+        }
+      } else {
       setError('Could not load your home data.')
+      }
     }
     finally { setLoading(false) }
   }, [router])
@@ -299,25 +256,20 @@ function DashboardContent() {
     setGreeting(hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening')
   }, [])
 
+  useEffect(() => {
+    setSelectedDate((prev) => (prev === today ? liveToday : prev))
+    setToday(liveToday)
+  }, [liveToday, today])
+
   const isToday = selectedDate === today
   const supplementsDone = supps.filter(s => suppLogs[s.id]).length
   const supplementTotal = supps.length
   const score = Math.round(dashboard?.adherence_score || 0)
   const calorieRemaining = Math.round(dashboard?.calories.remaining ?? 0)
   const calorieState = calorieRemaining < 0 ? 'Over target' : calorieRemaining === 0 ? 'On target' : 'Left today'
-  const nextStep = dashboard
-    ? dashboard.entry_count === 0
-      ? 'Start by logging your first meal.'
-      : (dashboard.water.percent ?? 0) < 100
-        ? 'Add water to stay on track.'
-        : supplementTotal > 0 && supplementsDone < supplementTotal
-          ? 'Finish your supplements for today.'
-          : 'You are in a good spot. Keep logging as you go.'
-    : 'Loading your day.'
-
   const quickLogTemplate = async (templateId: string) => {
     try {
-      await api.logTemplate(templateId, token)
+      await api.logTemplate(templateId, token, selectedDate)
       load(token, selectedDate)
     } catch (e: any) {
       alert(e.message || 'Could not log template')
@@ -372,25 +324,6 @@ function DashboardContent() {
             <h1 style={{ fontSize: '30px', fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1.05, marginTop: '6px' }}>
               <span style={{ color: '#d4ff00' }}>{greeting}</span>{displayName ? `, ${displayName.split(' ')[0]}` : ''}
             </h1>
-            <p style={{ fontSize: '13px', color: '#b8b8b8', marginTop: '10px', maxWidth: '520px', lineHeight: 1.5 }}>{nextStep}</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(110px, 1fr))', gap: '10px', width: 'min(100%, 250px)' }}>
-            <button onClick={() => setShowAdd(true)} style={{ padding: '14px 16px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '13px', fontWeight: 900, boxShadow: '0 8px 24px rgba(212,255,0,0.18)' }}>
-              Add meal
-              <Plus size={16} />
-            </button>
-            <button onClick={() => router.push('/log')} style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '13px', fontWeight: 800 }}>
-              Meal log
-              <ChevronRight size={16} />
-            </button>
-            <button onClick={() => router.push('/templates')} style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '13px', fontWeight: 800 }}>
-              Templates
-              <BookOpen size={16} />
-            </button>
-            <button onClick={() => router.push('/analytics')} style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontSize: '13px', fontWeight: 800 }}>
-              Insights
-              <TrendingUp size={16} />
-            </button>
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '10px' }}>
@@ -460,16 +393,6 @@ function DashboardContent() {
               <p style={{ fontSize: '11px', color: '#8a8a8a', marginTop: '4px' }}>{dashboard.calories.target ? `${calorieState} · target ${dashboard.calories.target}` : 'No calorie target set'}</p>
             </div>
 
-            <div style={{ ...S.card, marginBottom: 0, background: 'linear-gradient(135deg, rgba(212,255,0,0.05) 0%, rgba(3,4,9,0) 100%)', border: '1px solid rgba(212,255,0,0.12)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                <Zap size={16} color="#d4ff00" />
-                <p style={{ ...S.label, marginBottom: 0 }}>Next Step</p>
-              </div>
-              <p style={{ fontSize: '16px', fontWeight: 800, color: 'white', lineHeight: 1.4 }}>{nextStep}</p>
-              <button onClick={() => setShowAdd(true)} style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '14px', background: 'rgba(212,255,0,0.12)', color: '#d4ff00', border: '1px solid rgba(212,255,0,0.16)', cursor: 'pointer', fontSize: '12px', fontWeight: 900 }}>
-                Add now
-              </button>
-            </div>
           </div>
 
           {/* ── Workout Summary ── */}

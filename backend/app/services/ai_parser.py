@@ -65,7 +65,6 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
     """
     client = get_client()
 
-    print(f"DEBUG: Processing AU AI parse request (Claude 4.5) for: '{meal_text}'")
     try:
         message = await client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -126,6 +125,5 @@ async def parse_meal_with_haiku(meal_text: str) -> dict:
             "model": "error",
             "error": str(e)
         }
-
 
 

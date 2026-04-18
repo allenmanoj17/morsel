@@ -119,6 +119,7 @@ class MealEntryCreate(BaseModel):
     meal_name: str
     entry_text_raw: str
     logged_at: datetime
+    meal_date: Optional[date] = None
     calories: float
     protein_g: float
     carbs_g: float
@@ -141,6 +142,7 @@ class MealEntryUpdate(BaseModel):
     meal_type: Optional[str] = None
     notes: Optional[str] = None
     logged_at: Optional[datetime] = None
+    meal_date: Optional[date] = None
 
 
 class MealEntryResponse(BaseModel):
@@ -188,6 +190,15 @@ class DailyDashboardResponse(BaseModel):
     water: Optional[MacroProgress] = None
     entry_count: int
     entries: List[MealEntryResponse]
+
+
+class HomeCompositeResponse(BaseModel):
+    dashboard: DailyDashboardResponse
+    supplements: List["SupplementResponse"] = []
+    supplement_logs: List["SupplementLogResponse"] = []
+    workout_summary: Optional["WorkoutSummaryResponse"] = None
+    latest_weight: Optional["WeightLatestResponse"] = None
+    quick_templates: List["MealTemplatePreviewResponse"] = []
 
 
 # ─── Foods ────────────────────────────────────────────────────────────────────
@@ -256,6 +267,17 @@ class MealTemplateResponse(BaseModel):
     ingredient_snapshot: Any
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MealTemplatePreviewResponse(BaseModel):
+    id: UUID
+    template_name: str
+    description: Optional[str] = None
+    total_calories: float
+    total_protein_g: float
 
     class Config:
         from_attributes = True
@@ -366,6 +388,16 @@ class WeightResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class WeightLatestResponse(BaseModel):
+    id: UUID
+    date: date
+    weight_value: float
+    unit: str
+
+    class Config:
+        from_attributes = True
+
 # ─── Composite Responses ─────────────────────────────────────────────────────
 
 class ProfileCompositeResponse(BaseModel):
@@ -378,6 +410,17 @@ class AnalyticsCompositeResponse(BaseModel):
     trends: AnalyticsTrendsResponse
     stats: AnalyticsMealStatsResponse
     social: Optional["SocialSummaryResponse"] = None
+
+class AnalyticsOverviewResponse(BaseModel):
+    weekly: AnalyticsWeeklyResponse
+    trends: AnalyticsTrendsResponse
+    social: Optional["SocialSummaryResponse"] = None
+
+class AnalyticsDetailResponse(BaseModel):
+    stats: AnalyticsMealStatsResponse
+    volume_by_category: List[VolumeByCategory] = []
+    strength_evolution: Optional[List[StrengthTrend]] = None
+    recovery_status: Optional[List[RecoveryStatus]] = None
 
 class SocialSummaryResponse(BaseModel):
     date: date
@@ -467,6 +510,12 @@ class WorkoutSessionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class WorkoutSummaryResponse(BaseModel):
+    sessions: int
+    total_volume: float
+    last_session_date: Optional[date] = None
+
 # ─── Supplements ────────────────────────────────────────────────────────────
 class SupplementCreate(BaseModel):
     name: str
@@ -498,3 +547,6 @@ class SupplementLogResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+HomeCompositeResponse.model_rebuild()

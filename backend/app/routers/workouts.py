@@ -8,7 +8,7 @@ from app.supabase_client import get_supabase
 from app.dependencies import get_current_user_id
 from app.schemas import (
     ExerciseResponse, ExerciseCreate,
-    WorkoutSessionResponse, WorkoutSessionCreate, WorkoutSetBase
+    WorkoutSessionResponse, WorkoutSessionCreate, WorkoutSetBase, WorkoutSummaryResponse
 )
 
 router = APIRouter(prefix="/api/workouts", tags=["workouts"])
@@ -62,6 +62,29 @@ def get_workout_sessions(
         result.append(WorkoutSessionResponse(**{**s, "sets": sets}))
     
     return result
+
+
+@router.get("/summary", response_model=WorkoutSummaryResponse)
+def get_workout_summary(
+    limit: int = Query(30, ge=1, le=365),
+    user_id: str = Depends(get_current_user_id),
+    supabase: Client = Depends(get_supabase)
+):
+    resp = (
+        supabase.table("workout_sessions")
+        .select("session_date, total_volume")
+        .eq("user_id", user_id)
+        .order("session_date", desc=True)
+        .limit(limit)
+        .execute()
+    )
+
+    sessions = resp.data or []
+    return WorkoutSummaryResponse(
+        sessions=len(sessions),
+        total_volume=sum(float(s.get("total_volume") or 0) for s in sessions),
+        last_session_date=sessions[0]["session_date"] if sessions else None,
+    )
 
 @router.post("/sessions", response_model=WorkoutSessionResponse)
 def create_workout_session(

@@ -1,13 +1,13 @@
 from datetime import datetime, date
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from supabase import Client
 
 from app.supabase_client import get_supabase
 from app.dependencies import get_current_user_id
 from app.schemas import (
     MealTemplateCreate, MealTemplateUpdate, MealTemplateResponse,
-    MealEntryResponse, MealEntryCreate
+    MealEntryResponse, MealEntryCreate, MealTemplatePreviewResponse
 )
 from app.services.normalizer import normalize_text
 from app.routers.meals import create_meal
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/templates", tags=["templates"])
 
 @router.get("", response_model=List[MealTemplateResponse])
 def get_templates(
+    limit: int = Query(200, ge=1, le=200),
     user_id: str = Depends(get_current_user_id),
     supabase: Client = Depends(get_supabase),
 ):
@@ -25,7 +26,24 @@ def get_templates(
         .select("*")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
-        .limit(200)  # Pagination limit
+        .limit(limit)
+        .execute()
+    )
+    return resp.data or []
+
+
+@router.get("/quick", response_model=List[MealTemplatePreviewResponse])
+def get_templates_quick(
+    limit: int = Query(4, ge=1, le=12),
+    user_id: str = Depends(get_current_user_id),
+    supabase: Client = Depends(get_supabase),
+):
+    resp = (
+        supabase.table("meal_templates")
+        .select("id, template_name, description, total_calories, total_protein_g")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(limit)
         .execute()
     )
     return resp.data or []
@@ -116,6 +134,7 @@ def delete_template(
 @router.post("/{template_id}/log", response_model=MealEntryResponse, status_code=201)
 def log_template(
     template_id: str,
+    date: Optional[date] = Query(default=None),
     user_id: str = Depends(get_current_user_id),
     supabase: Client = Depends(get_supabase),
 ):
@@ -136,6 +155,7 @@ def log_template(
         meal_name=t["template_name"],
         entry_text_raw=f"(From template: {t['template_name']})",
         logged_at=datetime.utcnow(),
+        meal_date=date,
         calories=t["total_calories"],
         protein_g=t["total_protein_g"],
         carbs_g=t["total_carbs_g"],

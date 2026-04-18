@@ -15,7 +15,13 @@ async function tryRecoverSession(): Promise<string | null> {
     }
 
     const { data: refreshData, error } = await supabase.auth.refreshSession()
-    if (error) throw error
+    if (error) {
+      if (isExpiredRefreshTokenError(error)) {
+        tokenService.clearToken()
+        return null
+      }
+      throw error
+    }
 
     const refreshedSession = refreshData.session
     if (refreshedSession?.access_token) {
@@ -23,10 +29,18 @@ async function tryRecoverSession(): Promise<string | null> {
       return refreshedSession.access_token
     }
   } catch (error) {
-    console.error('Session recovery failed:', error)
+    if (!isExpiredRefreshTokenError(error)) {
+      console.error('Session recovery failed:', error)
+    }
   }
 
   return null
+}
+
+function isExpiredRefreshTokenError(error: any): boolean {
+  const code = error?.code
+  const message = String(error?.message || '').toLowerCase()
+  return code === 'refresh_token_not_found' || message.includes('invalid refresh token')
 }
 
 async function apiFetch(path: string, options: any = {}, token?: string): Promise<any> {
@@ -86,7 +100,7 @@ async function apiFetch(path: string, options: any = {}, token?: string): Promis
             }
 
             const supabase = createClient()
-            await supabase.auth.signOut()
+            await supabase.auth.signOut().catch(() => null)
             localStorage.removeItem('morsel_auth_error')
             window.location.href = '/login?error=session_expired'
           }
@@ -105,6 +119,16 @@ async function apiFetch(path: string, options: any = {}, token?: string): Promis
       if (res.status === 204) return null
       return res.json()
     } catch (e: any) {
+      if (isExpiredRefreshTokenError(e)) {
+        tokenService.clearToken()
+        if (typeof window !== 'undefined') {
+          const supabase = createClient()
+          await supabase.auth.signOut().catch(() => null)
+          window.location.href = '/login?error=session_expired'
+        }
+        throw new Error('Session expired. Please log in again.')
+      }
+
       if (e.name === 'AbortError') {
          throw new Error(`Request timed out. Please check your connection and try again.`)
       }
@@ -146,6 +170,9 @@ export const api = {
   getDailyDashboard: (date: string, token: string) =>
     apiFetch(`/api/dashboard/daily?date=${date}`, { timeout: 120000, retries: 3 }, token),
 
+  getHomeComposite: (date: string, token: string) =>
+    apiFetch(`/api/dashboard/home-composite?date=${date}`, { timeout: 120000, retries: 3 }, token),
+
   // Targets
   getTargets: (token: string) =>
     apiFetch('/api/targets', { retries: 3 }, token),
@@ -173,6 +200,9 @@ export const api = {
   getTemplates: (token: string) =>
     apiFetch('/api/templates', { retries: 3 }, token),
 
+  getTemplatesQuick: (token: string, limit = 4) =>
+    apiFetch(`/api/templates/quick?limit=${limit}`, { retries: 3 }, token),
+
   createTemplate: (body: object, token: string) =>
     apiFetch('/api/templates', { method: 'POST', body: JSON.stringify(body) }, token),
 
@@ -182,8 +212,8 @@ export const api = {
   deleteTemplate: (id: string, token: string) =>
     apiFetch(`/api/templates/${id}`, { method: 'DELETE' }, token),
 
-  logTemplate: (id: string, token: string) =>
-    apiFetch(`/api/templates/${id}/log`, { method: 'POST' }, token),
+  logTemplate: (id: string, token: string, mealDate?: string) =>
+    apiFetch(`/api/templates/${id}/log${mealDate ? `?date=${mealDate}` : ''}`, { method: 'POST' }, token),
 
   // Foods
   searchFoods: (q: string, token: string) =>
@@ -216,6 +246,20 @@ export const api = {
     return apiFetch(url, { timeout: 120000, retries: 3 }, token)
   },
 
+  getAnalyticsOverview: (days: number, token: string, start?: string, end?: string) => {
+    let url = `/api/analytics/overview?days=${days}`
+    if (start) url += `&start_date=${start}`
+    if (end) url += `&end_date=${end}`
+    return apiFetch(url, { timeout: 120000, retries: 3 }, token)
+  },
+
+  getAnalyticsDetail: (days: number, token: string, start?: string, end?: string) => {
+    let url = `/api/analytics/detail?days=${days}`
+    if (start) url += `&start_date=${start}`
+    if (end) url += `&end_date=${end}`
+    return apiFetch(url, { timeout: 120000, retries: 3 }, token)
+  },
+
   getSocialSummary: (date: string, token: string) =>
     apiFetch(`/api/analytics/social-summary/${date}`, { retries: 3 }, token),
 
@@ -226,6 +270,9 @@ export const api = {
   // Weights
   getWeights: (token: string) =>
     apiFetch('/api/weights', { retries: 3 }, token),
+
+  getLatestWeight: (token: string, date?: string) =>
+    apiFetch(`/api/weights/latest${date ? `?date=${date}` : ''}`, { retries: 3 }, token),
 
   createWeight: (body: object, token: string) =>
     apiFetch('/api/weights', { method: 'POST', body: JSON.stringify(body) }, token),
@@ -262,6 +309,9 @@ export const api = {
   // Workouts (Kinetic)
   getWorkoutSessions: (token: string) =>
     apiFetch('/api/workouts/sessions', { retries: 3 }, token),
+
+  getWorkoutSummary: (token: string, limit = 30) =>
+    apiFetch(`/api/workouts/summary?limit=${limit}`, { retries: 3 }, token),
 
   createWorkoutSession: (body: object, token: string) =>
     apiFetch('/api/workouts/sessions', { method: 'POST', body: JSON.stringify(body) }, token),

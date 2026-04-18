@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { hasSupabaseBrowserEnv } from '@/lib/supabase/env'
 import { ArrowRight, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -10,11 +11,18 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'magic' | 'signup'>('signin')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
-
-  const supabase = createClient()
+  const hasSupabaseEnv = hasSupabaseBrowserEnv()
 
   // Catch errors from the URL (e.g. expired magic links)
   useEffect(() => {
+    const query = new URLSearchParams(window.location.search)
+    if (query.get('error') === 'missing-supabase-env') {
+      setMessage({
+        type: 'error',
+        text: 'Supabase env vars are missing on this deploy. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then rebuild the frontend.',
+      })
+    }
+
     const hash = window.location.hash
     if (hash && hash.includes('error=')) {
       const params = new URLSearchParams(hash.replace('#', '?'))
@@ -26,8 +34,10 @@ export default function LoginPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!hasSupabaseEnv) return
     setLoading(true)
     setMessage(null)
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setMessage({ type: 'error', text: error.message })
@@ -39,8 +49,10 @@ export default function LoginPage() {
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!hasSupabaseEnv) return
     setLoading(true)
     setMessage(null)
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithOtp({ 
       email,
       options: {
@@ -57,8 +69,10 @@ export default function LoginPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!hasSupabaseEnv) return
     setLoading(true)
     setMessage(null)
+    const supabase = createClient()
     const { error, data } = await supabase.auth.signUp({ 
       email, 
       password,
@@ -177,7 +191,7 @@ export default function LoginPage() {
             <button
               id="login-submit"
               type="submit"
-              disabled={loading}
+              disabled={loading || !hasSupabaseEnv}
               className="w-full py-3.5 mt-2 rounded-[14px] bg-[#d4ff00] text-[#030409] font-black tracking-wide text-sm flex items-center justify-center gap-2 hover:bg-[#b8dd00] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_30px_rgba(212,255,0,0.15)] hover:shadow-[0_15px_40px_rgba(212,255,0,0.3)] hover:-translate-y-0.5"
             >
               {loading ? (

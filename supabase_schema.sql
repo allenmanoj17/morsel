@@ -33,6 +33,8 @@ create table if not exists public.daily_targets (
   created_at        timestamptz default now(),
   updated_at        timestamptz default now()
 );
+create index if not exists daily_targets_user_effective_from_idx on public.daily_targets(user_id, effective_from desc);
+create index if not exists daily_targets_user_type_effective_from_idx on public.daily_targets(user_id, target_type, effective_from desc);
 
 -- ─── food_items ──────────────────────────────────────────────────────────────
 create table if not exists public.food_items (
@@ -71,6 +73,7 @@ create table if not exists public.meal_templates (
   updated_at          timestamptz default now()
 );
 create index if not exists meal_templates_normalized_name_idx on public.meal_templates(normalized_name);
+create index if not exists meal_templates_user_created_at_idx on public.meal_templates(user_id, created_at desc);
 
 -- ─── meal_entries ────────────────────────────────────────────────────────────
 create table if not exists public.meal_entries (
@@ -95,6 +98,7 @@ create table if not exists public.meal_entries (
   updated_at        timestamptz default now()
 );
 create index if not exists meal_entries_meal_date_idx on public.meal_entries(meal_date);
+create index if not exists meal_entries_user_meal_date_idx on public.meal_entries(user_id, meal_date desc);
 
 -- ─── daily_rollups ───────────────────────────────────────────────────────────
 create table if not exists public.daily_rollups (
@@ -116,6 +120,7 @@ create table if not exists public.daily_rollups (
   updated_at            timestamptz default now(),
   unique(user_id, date)
 );
+create index if not exists daily_rollups_user_date_idx on public.daily_rollups(user_id, date desc);
 
 -- ─── weight_logs ─────────────────────────────────────────────────────────────
 create table if not exists public.weight_logs (
@@ -128,6 +133,7 @@ create table if not exists public.weight_logs (
   updated_at    timestamptz default now(),
   unique(user_id, date)
 );
+create index if not exists weight_logs_user_date_idx on public.weight_logs(user_id, date desc);
 
 -- ─── parse_audit ─────────────────────────────────────────────────────────────
 create table if not exists public.parse_audit (
@@ -248,6 +254,7 @@ create table if not exists public.exercises (
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );
+create index if not exists exercises_user_name_idx on public.exercises(user_id, name);
 alter table public.exercises enable row level security;
 drop policy if exists "own or global exercises" on public.exercises;
 create policy "own or global exercises" on public.exercises for all using (auth.uid() = user_id or user_id is null);
@@ -262,6 +269,7 @@ create table if not exists public.workout_sessions (
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );
+create index if not exists workout_sessions_user_session_date_idx on public.workout_sessions(user_id, session_date desc);
 alter table public.workout_sessions enable row level security;
 drop policy if exists "own workouts" on public.workout_sessions;
 create policy "own workouts" on public.workout_sessions for all using (auth.uid() = user_id);
@@ -276,6 +284,8 @@ create table if not exists public.workout_sets (
   weight        numeric(8,2) not null,
   created_at    timestamptz default now()
 );
+create index if not exists workout_sets_session_id_idx on public.workout_sets(session_id);
+create index if not exists workout_sets_exercise_name_idx on public.workout_sets(exercise_name);
 alter table public.workout_sets enable row level security;
 drop policy if exists "own workout sets" on public.workout_sets;
 create policy "own workout sets" on public.workout_sets for all using (
@@ -292,6 +302,7 @@ create table if not exists public.supplement_stack (
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );
+create index if not exists supplement_stack_user_active_idx on public.supplement_stack(user_id, is_active);
 alter table public.supplement_stack enable row level security;
 drop policy if exists "own supplement stack" on public.supplement_stack;
 create policy "own supplement stack" on public.supplement_stack for all using (auth.uid() = user_id);
@@ -306,6 +317,7 @@ create table if not exists public.supplement_logs (
   created_at    timestamptz default now(),
   unique(user_id, date, supplement_id)
 );
+create index if not exists supplement_logs_user_date_idx on public.supplement_logs(user_id, date desc);
 alter table public.supplement_logs enable row level security;
 drop policy if exists "own supplement logs" on public.supplement_logs;
 create policy "own supplement logs" on public.supplement_logs for all using (auth.uid() = user_id);
@@ -324,6 +336,7 @@ create table if not exists public.water_logs (
   updated_at    timestamptz default now(),
   unique(user_id, date)
 );
+create index if not exists water_logs_user_date_idx on public.water_logs(user_id, date desc);
 
 alter table public.water_logs enable row level security;
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
+import { getLocalDateString } from '@/lib/utils'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { Plus, Trash2, ArrowLeft, Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -12,7 +13,7 @@ export default function WeightPage() {
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState('')
   const [wVal, setWVal] = useState('')
-  const [wDate, setWDate] = useState(new Date().toISOString().substring(0, 10))
+  const [wDate, setWDate] = useState(getLocalDateString())
   const [saving, setSaving] = useState(false)
   const [height, setHeight] = useState('')
   const router = useRouter()

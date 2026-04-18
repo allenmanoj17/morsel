@@ -1,4 +1,5 @@
 from datetime import datetime, date
+import re
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
@@ -18,6 +19,52 @@ router = APIRouter(prefix="/api/meals", tags=["meals"])
 
 
 # ── Rollup helper ─────────────────────────────────────────────────────────────
+
+def _build_composite_meal_name(items: List[ParsedItem], fallback_parts: List[str]) -> str:
+    def _clean_name(raw: str) -> str:
+        name = raw.strip()
+        name = re.sub(r"\(.*?\)", "", name).strip()
+        name = name.split(",")[0].strip()
+        name = re.sub(
+            r"^\s*\d+(?:\.\d+)?\s*(?:x|tbsp|tsp|g|kg|ml|l|oz|cup|cups|slice|slices|piece|pieces|serving|servings)\b",
+            "",
+            name,
+            flags=re.IGNORECASE,
+        ).strip()
+        name = re.sub(r"^\s*\d+(?:\.\d+)?\s+", "", name).strip()
+        name = re.sub(
+            r"\b(?:approx|about|around|style|wholemeal|wholegrain|toasted|fresh|large|small|medium)\b",
+            "",
+            name,
+            flags=re.IGNORECASE,
+        ).strip()
+        name = re.sub(r"\b(?:espresso)\b", "", name, flags=re.IGNORECASE).strip()
+        name = re.sub(r"\s+", " ", name).strip(" ,+-")
+        words = [word for word in name.split(" ") if word]
+        if len(words) > 3:
+            name = " ".join(words[-3:])
+        return name or raw.strip()
+
+    names = [_clean_name(item.name) for item in items if item.name and item.name.strip()]
+    if not names:
+        names = [_clean_name(part) for part in fallback_parts if part.strip()]
+
+    if not names:
+        return "Meal"
+
+    unique_names: List[str] = []
+    seen = set()
+    for name in names:
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_names.append(name)
+
+    if len(unique_names) <= 3:
+        return ", ".join(unique_names)
+
+    return f"{', '.join(unique_names[:3])} +{len(unique_names) - 3}"
 
 def _upsert_rollup(supabase: Client, user_id: str, meal_date: str) -> None:
     """Recalculate and upsert daily_rollups after any meal mutation."""
@@ -180,7 +227,7 @@ async def parse_meal(
                 # Continue with partial data
                 
         return MealParseResponse(
-            meal_name="Composite Meal",
+            meal_name=_build_composite_meal_name(all_items, parts),
             items=all_items,
             total_calories=total_cals,
             total_protein_g=total_prot,
@@ -257,10 +304,13 @@ def create_meal(
     else:
         utc_now_dt = utc_now_dt.astimezone(timezone.utc)
     
-    # 2. Extract 'meal_date' by adjusting that UTC to Sydney
-    from app.utils.timezone import _get_tz
-    sydney_dt = utc_now_dt.astimezone(_get_tz())
-    meal_date = sydney_dt.date().isoformat()
+    # 2. Prefer the client-selected local day when provided. Fallback to Sydney-derived day.
+    if body.meal_date is not None:
+        meal_date = body.meal_date.isoformat()
+    else:
+        from app.utils.timezone import _get_tz
+        sydney_dt = utc_now_dt.astimezone(_get_tz())
+        meal_date = sydney_dt.date().isoformat()
     
     now_iso = get_sydney_now().isoformat()
     data = {
@@ -331,6 +381,17 @@ def update_meal(
     update_data = {k: v for k, v in body.model_dump(exclude_none=True).items()}
     if "logged_at" in update_data:
         update_data["logged_at"] = update_data["logged_at"].isoformat()
+    if "meal_date" in update_data:
+        update_data["meal_date"] = update_data["meal_date"].isoformat()
+    elif body.logged_at is not None:
+        from datetime import timezone
+        logged_at = body.logged_at
+        if logged_at.tzinfo is None:
+            logged_at = logged_at.replace(tzinfo=timezone.utc)
+        else:
+            logged_at = logged_at.astimezone(timezone.utc)
+        from app.utils.timezone import _get_tz
+        update_data["meal_date"] = logged_at.astimezone(_get_tz()).date().isoformat()
     update_data["updated_at"] = get_sydney_now().isoformat()
 
     resp = (
@@ -340,8 +401,11 @@ def update_meal(
         .eq("user_id", user_id)
         .execute()
     )
-    meal_date = existing.data[0]["meal_date"]
-    _upsert_rollup(supabase, user_id, str(meal_date))
+    old_meal_date = str(existing.data[0]["meal_date"])
+    new_meal_date = str(update_data.get("meal_date", old_meal_date))
+    _upsert_rollup(supabase, user_id, old_meal_date)
+    if new_meal_date != old_meal_date:
+        _upsert_rollup(supabase, user_id, new_meal_date)
     return resp.data[0]
 
 

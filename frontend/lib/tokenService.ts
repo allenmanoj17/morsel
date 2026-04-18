@@ -39,7 +39,13 @@ class TokenService {
       const supabase = createClient()
       const { data: { session }, error } = await supabase.auth.getSession()
       
-      if (error) throw error
+      if (error) {
+        if (this.isExpiredRefreshToken(error)) {
+          this.clearToken()
+          return null
+        }
+        throw error
+      }
       
       if (session?.access_token) {
         // Set expiry to 1 minute before actual expiry (safety margin)
@@ -49,9 +55,17 @@ class TokenService {
       
       return null
     } catch (error) {
-      console.error('Token fetch error:', error)
+      if (!this.isExpiredRefreshToken(error)) {
+        console.error('Token fetch error:', error)
+      }
       return null
     }
+  }
+
+  private isExpiredRefreshToken(error: any): boolean {
+    const code = error?.code || error?.__isAuthError && error?.code
+    const message = String(error?.message || '').toLowerCase()
+    return code === 'refresh_token_not_found' || message.includes('invalid refresh token')
   }
 
   clearToken(): void {

@@ -3,12 +3,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
-import { getLocalDateString } from '@/lib/utils'
-import { Plus, Clock, Pencil, Trash2, Copy, Loader2, X, Save, ChevronLeft, ChevronRight, Utensils } from 'lucide-react'
+import { addDaysToDateString, getLocalDateString, localDateTimeToUtcIso } from '@/lib/utils'
+import { useCurrentDateString } from '@/lib/useCurrentDateString'
+import { Plus, Clock, Pencil, Trash2, Copy, Loader2, X, Save, ChevronLeft, ChevronRight, Utensils, Bookmark, ChevronDown } from 'lucide-react'
 import QuickAddModal from '@/components/QuickAddModal'
 
 interface MealEntry {
   id: string; meal_name: string; entry_text_raw: string; logged_at: string
+  meal_date?: string
   calories: number; protein_g: number; carbs_g: number; fat_g: number
   source_type: string; meal_type: string; notes?: string; items?: any[]
 }
@@ -26,6 +28,9 @@ function EditModal({ entry, token, onClose, onSaved }: {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState(entry.meal_name)
+  const [templateDescription, setTemplateDescription] = useState(entry.notes || '')
 
   const fields = [
     { id: 'edit-name', label: 'Meal Name',   key: 'meal_name',  type: 'text',   suffix: '', min: 1, max: 100 },
@@ -110,6 +115,43 @@ function EditModal({ entry, token, onClose, onSaved }: {
             style={{ width: '100%', borderRadius: '14px', padding: '14px 16px', fontSize: '14px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white', resize: 'vertical' }}
           />
         </div>
+        <div style={{ marginBottom: '20px', padding: '14px', borderRadius: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            onClick={() => {
+              const next = !saveAsTemplate
+              setSaveAsTemplate(next)
+              if (next && !templateName.trim()) setTemplateName(vals.meal_name.trim())
+            }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: 0 }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: saveAsTemplate ? 'rgba(212,255,0,0.14)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bookmark size={16} color={saveAsTemplate ? '#d4ff00' : '#8a8a8a'} />
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: '13px', fontWeight: 800 }}>Add to templates</p>
+                <p style={{ fontSize: '11px', color: '#8a8a8a' }}>Save this meal and choose a name or note</p>
+              </div>
+            </div>
+            <ChevronDown size={16} color={saveAsTemplate ? '#d4ff00' : '#8a8a8a'} style={{ transform: saveAsTemplate ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+          </button>
+          {saveAsTemplate && (
+            <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
+              <input
+                value={templateName}
+                onChange={e => setTemplateName(e.target.value)}
+                placeholder="Choose a template name"
+                style={{ width: '100%', borderRadius: '14px', padding: '14px 16px', fontSize: '14px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white' }}
+              />
+              <input
+                value={templateDescription}
+                onChange={e => setTemplateDescription(e.target.value)}
+                placeholder="Add a short note if you want"
+                style={{ width: '100%', borderRadius: '14px', padding: '14px 16px', fontSize: '14px', fontWeight: 700, outline: 'none', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'white' }}
+              />
+            </div>
+          )}
+        </div>
         {error && (
           <div style={{ marginBottom: '20px', padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,45,85,0.08)', border: '1px solid rgba(255,45,85,0.16)' }}>
             <p style={{ fontSize: '12px', fontWeight: 800, color: '#ff2d55' }}>{error}</p>
@@ -123,9 +165,21 @@ function EditModal({ entry, token, onClose, onSaved }: {
             }
             setSaving(true);
             try {
-              const datePart = entry.logged_at.split('T')[0]
-              const loggedAt = new Date(`${datePart}T${vals.time}:00`).toISOString()
-              await api.updateMeal(entry.id, { ...vals, logged_at: loggedAt }, token);
+              const mealDate = entry.meal_date || entry.logged_at.split('T')[0]
+              const loggedAt = localDateTimeToUtcIso(mealDate, vals.time)
+              await api.updateMeal(entry.id, { ...vals, logged_at: loggedAt, meal_date: mealDate }, token);
+              if (saveAsTemplate) {
+                await api.createTemplate({
+                  template_name: (templateName || vals.meal_name).trim(),
+                  description: templateDescription.trim() || undefined,
+                  total_calories: vals.calories,
+                  total_protein_g: vals.protein_g,
+                  total_carbs_g: vals.carbs_g,
+                  total_fat_g: vals.fat_g,
+                  ingredient_snapshot: entry.items?.length ? entry.items : [{ name: vals.meal_name, raw_text: entry.entry_text_raw }],
+                }, token)
+                localStorage.removeItem('morsel_templates_cache')
+              }
               onSaved()
             } catch (e: any) {
               setError(e.message || 'Could not save this entry.')
@@ -134,7 +188,7 @@ function EditModal({ entry, token, onClose, onSaved }: {
           disabled={saving || !isValid()}
           style={{ width: '100%', padding: '18px', borderRadius: '16px', background: '#d4ff00', color: '#030409', border: 'none', fontWeight: 900, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: saving || !isValid() ? 'not-allowed' : 'pointer', opacity: saving || !isValid() ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
         >
-          {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={20} /> Save Changes</>}
+          {saving ? <Loader2 size={18} className="animate-spin" /> : <><Save size={20} /> {saveAsTemplate ? 'Save + Template' : 'Save Changes'}</>}
         </button>
       </div>
     </div>
@@ -142,9 +196,7 @@ function EditModal({ entry, token, onClose, onSaved }: {
 }
 
 function offsetDate(base: string, delta: number) {
-  const d = new Date(base + 'T12:00:00')
-  d.setDate(d.getDate() + delta)
-  return getLocalDateString(d)
+  return addDaysToDateString(base, delta)
 }
 
 function friendlyDate(iso: string) {
@@ -163,9 +215,9 @@ export default function LogPage() {
   const [editEntry, setEditEntry] = useState<MealEntry | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [mealTypeFilter, setMealTypeFilter] = useState('all')
-  const tInitial = getLocalDateString()
-  const [date, setDate] = useState(tInitial)
-  const [today, setToday] = useState(tInitial)
+  const liveToday = useCurrentDateString()
+  const [date, setDate] = useState(liveToday)
+  const [today, setToday] = useState(liveToday)
 
   const load = useCallback(async (tok: string, d: string) => {
     if (!tok || !d) return 
@@ -199,6 +251,11 @@ export default function LogPage() {
     })
   }, [load, date])
 
+  useEffect(() => {
+    setDate((prev) => (prev === today ? liveToday : prev))
+    setToday(liveToday)
+  }, [liveToday, today])
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this entry?')) return
     await api.deleteMeal(id, token); load(token, date)
@@ -208,6 +265,7 @@ export default function LogPage() {
     await api.createMeal({
       meal_name: entry.meal_name, entry_text_raw: entry.entry_text_raw,
       logged_at: new Date().toISOString(),
+      meal_date: date,
       calories: entry.calories, protein_g: entry.protein_g,
       carbs_g: entry.carbs_g, fat_g: entry.fat_g, source_type: 'manual',
     }, token)

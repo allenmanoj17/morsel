@@ -1,16 +1,22 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { getSupabaseServerEnv } from '@/lib/supabase/env'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const env = getSupabaseServerEnv()
+
+  if (!env) {
+    return NextResponse.redirect(new URL('/login?error=missing-supabase-env', requestUrl.origin))
+  }
   
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      env.url,
+      env.anonKey,
       {
         cookies: {
           getAll() {

@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useState, useCallback, useMemo, Suspense } from 'react'
+import { useEffect, useState, useCallback, useMemo, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
-import { getLocalDateString } from '@/lib/utils'
+import { addDaysToDateString, getLocalDateString } from '@/lib/utils'
+import { useCurrentDateString } from '@/lib/useCurrentDateString'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
   CartesianGrid, PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, ComposedChart
@@ -59,9 +60,11 @@ function AnalyticsContent() {
   const [trends, setTrends] = useState<any>(null)
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [socialData, setSocialData] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [degraded, setDegraded] = useState(false)
+  const loadSeq = useRef(0)
 
   useEffect(() => {
     if (searchParams.get('share') === 'true') {
@@ -70,16 +73,14 @@ function AnalyticsContent() {
   }, [searchParams])
   
   // Date State
-  const today = getLocalDateString()
+  const today = useCurrentDateString()
   const sevenDaysAgo = transitionDate(today, -6)
   const [rangeType, setRangeType] = useState<'7D' | '30D' | '90D' | 'custom'>('7D')
   const [startDate, setStartDate] = useState(sevenDaysAgo)
   const [endDate, setEndDate] = useState(today)
 
   function transitionDate(base: string, delta: number) {
-    const d = new Date(base + 'T12:00:00')
-    d.setDate(d.getDate() + delta)
-    return d.toISOString().split('T')[0]
+    return addDaysToDateString(base, delta)
   }
 
   // Auto-set dates when range changes
@@ -97,38 +98,84 @@ function AnalyticsContent() {
   }, [rangeType, today])
 
   const load = useCallback(async (tok: string) => {
+    const requestId = ++loadSeq.current
+    const rangeDays = rangeType === '7D' ? 7 : rangeType === '30D' ? 30 : 90
     try {
       setDegraded(false)
-      const cacheKey = `morsel_analytics_cache_${startDate}_${endDate}`
-      const composite = await api.getCompositeAnalytics(rangeType === '7D' ? 7 : rangeType === '30D' ? 30 : 90, tok, startDate, endDate)
-      setWeekly(composite.weekly)
-      setTrends(composite.trends)
-      setStats(composite.stats)
-      setSocialData(composite.social)
-      localStorage.setItem(cacheKey, JSON.stringify(composite))
-      
-      const prof = await api.getOnboarding(tok)
+      setLoading(true)
+      setDetailLoading(false)
+      const overviewCacheKey = `morsel_analytics_overview_${startDate}_${endDate}`
+      const detailCacheKey = `morsel_analytics_detail_${startDate}_${endDate}`
+      const [overview, prof] = await Promise.all([
+        api.getAnalyticsOverview(rangeDays, tok, startDate, endDate),
+        api.getOnboarding(tok),
+      ])
+      if (requestId !== loadSeq.current) return
+      setWeekly(overview.weekly)
+      setTrends(overview.trends)
+      setSocialData(overview.social)
       setProfile(prof)
+      localStorage.setItem(overviewCacheKey, JSON.stringify(overview))
+      setLoading(false)
+
+      setDetailLoading(true)
+      api.getAnalyticsDetail(rangeDays, tok, startDate, endDate)
+        .then((detail) => {
+          if (requestId !== loadSeq.current) return
+          setStats(detail.stats)
+          setWeekly((prev: any) => prev ? { ...prev, volume_by_category: detail.volume_by_category || [] } : prev)
+          setTrends((prev: any) => prev ? {
+            ...prev,
+            volume_by_category: detail.volume_by_category || [],
+            strength_evolution: detail.strength_evolution || [],
+            recovery_status: detail.recovery_status || [],
+          } : prev)
+          localStorage.setItem(detailCacheKey, JSON.stringify(detail))
+        })
+        .catch((err) => {
+          if (requestId !== loadSeq.current) return
+          console.error("Analytics Detail Error:", err)
+          setDegraded(true)
+        })
+        .finally(() => {
+          if (requestId === loadSeq.current) setDetailLoading(false)
+        })
     } catch (err) {
-      console.error("Analytics Load Error:", err)
+      if (requestId !== loadSeq.current) return
+      console.error("Analytics Overview Error:", err)
       setDegraded(true)
-    } finally {
       setLoading(false)
     }
   }, [startDate, endDate, rangeType])
 
   useEffect(() => {
-    const cacheKey = `morsel_analytics_cache_${startDate}_${endDate}`
-    const cached = localStorage.getItem(cacheKey)
-    if (cached) {
+    const overviewCacheKey = `morsel_analytics_overview_${startDate}_${endDate}`
+    const detailCacheKey = `morsel_analytics_detail_${startDate}_${endDate}`
+    const overviewCached = localStorage.getItem(overviewCacheKey)
+    if (overviewCached) {
       try {
-        const d = JSON.parse(cached)
+        const d = JSON.parse(overviewCached)
         setWeekly(d.weekly)
         setTrends(d.trends)
-        setStats(d.stats)
         setSocialData(d.social)
       } catch (e: any) {
-        console.error('Failed to parse analytics cache:', e)
+        console.error('Failed to parse analytics overview cache:', e)
+      }
+    }
+    const detailCached = localStorage.getItem(detailCacheKey)
+    if (detailCached) {
+      try {
+        const d = JSON.parse(detailCached)
+        setStats(d.stats)
+        setWeekly((prev: any) => prev ? { ...prev, volume_by_category: d.volume_by_category || [] } : prev)
+        setTrends((prev: any) => prev ? {
+          ...prev,
+          volume_by_category: d.volume_by_category || [],
+          strength_evolution: d.strength_evolution || [],
+          recovery_status: d.recovery_status || [],
+        } : prev)
+      } catch (e: any) {
+        console.error('Failed to parse analytics detail cache:', e)
       }
     }
   }, [startDate, endDate])
@@ -257,6 +304,25 @@ function AnalyticsContent() {
     supplement: Math.round(item.suppAdherence || 0)
   })), [chartData])
 
+  const workoutDays = useMemo(
+    () => chartData.filter((item: any) => Number(item.volume) > 0).length,
+    [chartData]
+  )
+
+  const foodTypeData = useMemo(
+    () => (stats?.type_distribution || []).map((item: any) => ({
+      type: item.type,
+      count: item.count,
+      avgCalories: Math.round(item.avg_calories || 0),
+    })),
+    [stats]
+  )
+
+  const topFoodType = foodTypeData.reduce((best: any, item: any) => (
+    !best || item.count > best.count ? item : best
+  ), null)
+  const detailReady = Boolean(stats)
+
   if (loading && !weekly) return (
     <div style={{ padding: '24px', background: '#030409', minHeight: '100vh' }}>
       <div style={{ height: 100, background: 'rgba(255,255,255,0.03)', borderRadius: '24px', marginBottom: '24px' }} className="animate-pulse" />
@@ -379,12 +445,13 @@ function AnalyticsContent() {
                 </div>
              </div>
              
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
                 {[
                   { l: 'CALS', v: weekly.calories_hit_count, c: '#00d9ff' },
                   { l: 'PROTEIN', v: weekly.protein_hit_count, c: '#d4ff00' },
                   { l: 'WATER', v: weekly.water_hit_count, c: '#00d9ff' },
-                  { l: 'VOLUME', v: Math.round(weekly.total_workout_volume / 1000) + 'k', c: '#d4ff00' }
+                  { l: 'VOLUME', v: Math.round(weekly.total_workout_volume / 1000) + 'k', c: '#d4ff00' },
+                  { l: 'WORKOUTS', v: workoutDays, c: '#ffffff' }
                 ].map(b => (
                   <div key={b.l} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '20px', padding: '16px 8px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.02)' }}>
                      <p style={{ fontSize: '18px', fontWeight: 900, color: b.c }}>{b.v}</p>
@@ -424,6 +491,10 @@ function AnalyticsContent() {
                 <div style={{ fontSize: '10px', color: '#5a5a5a', fontWeight: 800 }}>BY TYPE</div>
              </div>
              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', height: '120px' }}>
+                {!detailReady && detailLoading ? (
+                  <div style={{ fontSize: '12px', color: '#5a5a5a', fontWeight: 700 }}>Loading workout split…</div>
+                ) : (
+                  <>
                 <div style={{ width: '100px', height: '100%' }}>
                    <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -448,6 +519,8 @@ function AnalyticsContent() {
                      </div>
                    ))}
                 </div>
+                  </>
+                )}
              </div>
           </div>
 
@@ -530,7 +603,7 @@ function AnalyticsContent() {
           ))}
           {!trends.recovery_status?.length && (
             <div style={{ ...S.card, margin: 0, padding: '40px', textAlign: 'center', color: '#5a5a5a', fontSize: '12px', fontWeight: 600 }}>
-               Log workouts to see recovery.
+               {detailLoading ? 'Loading recovery…' : 'Log workouts to see recovery.'}
             </div>
           )}
        </div>
@@ -566,7 +639,7 @@ function AnalyticsContent() {
           ))}
           {!trends.strength_evolution?.length && (
             <div style={{ ...S.card, margin: 0, padding: '40px', textAlign: 'center', color: '#5a5a5a', fontSize: '12px', fontWeight: 600 }}>
-               Log the same exercise more than once to see progress.
+               {detailLoading ? 'Loading strength history…' : 'Log the same exercise more than once to see progress.'}
             </div>
           )}
        </div>
@@ -619,20 +692,32 @@ function AnalyticsContent() {
              </div>
           </div>
 
-          {/* Meal Times */}
           <div style={S.card}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: 900, color: '#d4ff00' }}>MEAL TIMES</h3>
-                <Clock size={16} color="#5a5a5a" />
+                <h3 style={{ fontSize: '13px', fontWeight: 900, color: '#d4ff00' }}>FOOD TYPES</h3>
+                <PieIcon size={16} color="#5a5a5a" />
              </div>
              <div style={{ height: 160 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={stats?.time_distribution || []}>
-                      <Tooltip cursor={{ fill: 'rgba(212,255,0,0.05)' }} contentStyle={CHART_THEME.tooltip} />
-                      <Bar dataKey="count" fill="#d4ff00" radius={[4, 4, 0, 0]} opacity={0.6} barSize={12} />
-                      <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#5a5a5a' }} interval={3} />
-                   </BarChart>
+                   <PieChart>
+                      <Pie data={foodTypeData} dataKey="count" nameKey="type" innerRadius={34} outerRadius={58} paddingAngle={4} stroke="none">
+                         {foodTypeData.map((_: any, i: number) => (
+                           <Cell key={i} fill={['#d4ff00', '#00d9ff', '#ff2d55', '#ffffff', '#8a8a8a', '#6be675', '#f5a623'][i % 7]} />
+                         ))}
+                      </Pie>
+                      <Tooltip contentStyle={CHART_THEME.tooltip} formatter={(value: any, _name: any, entry: any) => [`${value} logs`, entry?.payload?.type?.replace('-', ' ')]} />
+                   </PieChart>
                 </ResponsiveContainer>
+             </div>
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', marginTop: '12px' }}>
+                <div style={{ padding: '10px 12px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <p style={{ fontSize: '9px', color: '#5a5a5a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Top Type</p>
+                  <p style={{ fontSize: '12px', color: 'white', fontWeight: 800, marginTop: '6px' }}>{topFoodType ? topFoodType.type.replace('-', ' ') : 'None'}</p>
+                </div>
+                <div style={{ padding: '10px 12px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <p style={{ fontSize: '9px', color: '#5a5a5a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Logs</p>
+                  <p style={{ fontSize: '12px', color: 'white', fontWeight: 800, marginTop: '6px' }}>{topFoodType ? topFoodType.count : 0}</p>
+                </div>
              </div>
           </div>
 
@@ -675,6 +760,11 @@ function AnalyticsContent() {
       {/* ── Common Meals ── */}
       <h3 style={S.label}>Common Meals</h3>
       <div style={S.grid}>
+         {!detailReady && detailLoading && (
+           <div style={{ ...S.card, marginBottom: 0, padding: '24px', textAlign: 'center', color: '#5a5a5a', fontSize: '12px', fontWeight: 700 }}>
+             Loading meal patterns…
+           </div>
+         )}
          {stats?.frequent_items?.slice(0, 4).map((item: any, i: number) => (
            <div key={i} style={{ ...S.card, marginBottom: 0, padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -687,7 +777,7 @@ function AnalyticsContent() {
                     const supabase = createClient();
                     const { data: { session } } = await supabase.auth.getSession();
                     if (!session) return;
-                    await api.createMeal({ meal_name: item.meal_name, entry_text_raw: `Quick Repeat: ${item.meal_name}`, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, logged_at: new Date().toISOString(), source_type: 'repeat' }, session.access_token);
+                    await api.createMeal({ meal_name: item.meal_name, entry_text_raw: `Quick Repeat: ${item.meal_name}`, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, logged_at: new Date().toISOString(), meal_date: getLocalDateString(), source_type: 'repeat' }, session.access_token);
                     alert(`Logged ${item.meal_name}!`);
                   } catch (e: any) {
                     console.error('Failed to repeat meal:', e)

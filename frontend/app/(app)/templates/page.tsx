@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
+import { getLocalDateString } from '@/lib/utils'
 import { Plus, Trash2, Edit3, Loader2, Play, X, Save } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -158,7 +159,7 @@ export default function TemplatesPage() {
 
   const handleLog = async (id: string) => {
     try {
-      await api.logTemplate(id, token)
+      await api.logTemplate(id, token, getLocalDateString())
       router.push('/log')
     } catch (e) {
       alert('Failed to log meal')

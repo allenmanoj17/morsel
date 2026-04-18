@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from supabase import Client
 
 from app.supabase_client import get_supabase
 from app.dependencies import get_current_user_id
-from app.schemas import WeightCreate, WeightUpdate, WeightResponse
+from app.schemas import WeightCreate, WeightUpdate, WeightResponse, WeightLatestResponse
 
 router = APIRouter(prefix="/api/weights", tags=["weights"])
 
@@ -22,6 +22,35 @@ def get_weights(
         .execute()
     )
     return resp.data or []
+
+
+@router.get("/latest", response_model=Optional[WeightLatestResponse])
+def get_latest_weight(
+    date: str | None = None,
+    user_id: str = Depends(get_current_user_id),
+    supabase: Client = Depends(get_supabase),
+):
+    if date:
+        resp = (
+            supabase.table("weight_logs")
+            .select("id, date, weight_value, unit")
+            .eq("user_id", user_id)
+            .eq("date", date)
+            .limit(1)
+            .execute()
+        )
+        if resp.data:
+            return resp.data[0]
+
+    resp = (
+        supabase.table("weight_logs")
+        .select("id, date, weight_value, unit")
+        .eq("user_id", user_id)
+        .order("date", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return resp.data[0] if resp.data else None
 
 @router.post("", response_model=WeightResponse, status_code=status.HTTP_201_CREATED)
 def create_weight(

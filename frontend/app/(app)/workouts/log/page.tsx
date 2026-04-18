@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { api } from '@/lib/api'
+import { getLocalDateString } from '@/lib/utils'
 import { Plus, Trash2, Check, ChevronLeft, Dumbbell, Hash, Weight, Save, Timer, Zap, Clock } from 'lucide-react'
 import QuickAddExerciseModal from '@/components/QuickAddExerciseModal'
 
@@ -35,7 +36,7 @@ export default function WorkoutLogPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [token, setToken] = useState('')
-  const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0])
+  const [sessionDate, setSessionDate] = useState(getLocalDateString())
   const [notes, setNotes] = useState('')
   const [timer, setTimer] = useState<number | null>(null)
   const [showAddEx, setShowAddEx] = useState(false)
